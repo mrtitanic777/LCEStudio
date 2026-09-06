@@ -459,6 +459,8 @@ class Studio(tk.Tk):
                         command=self.render_map).pack(side="left")
         ttk.Radiobutton(ctl, text="Slice @ Y", variable=self.map_mode, value="Slice",
                         command=self.render_map).pack(side="left")
+        ttk.Radiobutton(ctl, text="Isometric", variable=self.map_mode, value="Isometric",
+                        command=self.render_map).pack(side="left")
         self.map_y = tk.IntVar(value=64)
         ttk.Scale(ctl, from_=0, to=127, variable=self.map_y, orient="horizontal", length=140,
                   command=lambda e: self._map_slice_live()).pack(side="left", padx=6)
@@ -574,6 +576,16 @@ class Studio(tk.Tk):
         def work():
             from . import atlas
             vw = self._map_world(self._map_prog)            # format-complete (all TU formats)
+            if mode == "Isometric":                         # whole-world 3D view (no top-down overlay)
+                from . import iso
+                img = iso.render_iso(vw, tile=8)
+                if fit and img.width and img.height:        # scale the render down to the canvas
+                    sc = min(cw / img.width, ch / img.height)
+                    if sc < 0.99:
+                        from PIL import Image
+                        img = img.resize((max(1, int(img.width * sc)), max(1, int(img.height * sc))),
+                                         Image.LANCZOS)
+                return img, None, None, 1.0                 # x0=None marks an iso (view-only) render
             img = atlas.render_slice(vw, ycut) if mode == "Slice" else atlas.render_world(vw)
             x0, z0 = atlas.world_origin(vw)
             scale = max(0.1, min(min(cw / img.width, ch / img.height), 12)) if fit else manual
@@ -586,14 +598,16 @@ class Studio(tk.Tk):
             big, x0, z0, scale = res
             self._map_photo = ImageTk.PhotoImage(big)
             self._map_origin = (x0, z0); self._map_scale_used = scale
+            self._map_is_iso = (x0 is None)
             ix = max(0, (cw - big.width) // 2); iy = max(0, (ch - big.height) // 2)
             self._map_place = (ix, iy)
             self.map_canvas.delete("all")
             self.map_canvas.create_image(ix, iy, anchor="nw", image=self._map_photo)
             self.map_canvas.configure(scrollregion=(0, 0, max(cw, ix + big.width),
                                                     max(ch, iy + big.height)))
-            self._draw_poi_markers()
-            self.status.set("Map rendered.")
+            if not self._map_is_iso:
+                self._draw_poi_markers()
+            self.status.set("Isometric view rendered." if self._map_is_iso else "Map rendered.")
             self._rendering = False
             if getattr(self, "_render_pending", False):
                 self._render_pending = False
@@ -631,7 +645,7 @@ class Studio(tk.Tk):
         return int(x0 + cx / s), int(z0 + cy / s)
 
     def on_map_click(self, ev):
-        if self.world is None:
+        if self.world is None or getattr(self, "_map_is_iso", False):
             return
         wx, wz = self._canvas_to_world(ev)
         try:
@@ -645,6 +659,8 @@ class Studio(tk.Tk):
             self.map_read.set("world (x=%d, z=%d)" % (wx, wz))
 
     def on_map_dblclick(self, ev):
+        if self.world is None or getattr(self, "_map_is_iso", False):
+            return
         wx, wz = self._canvas_to_world(ev)
         self.blk["x"].set(str(wx)); self.blk["z"].set(str(wz))
         c = self.world.chunk(wx >> 4, wz >> 4) if self.world else None
