@@ -131,3 +131,133 @@ def add_mountains(world, max_height=45, scale=40, coverage=0.55, roughness=3,
                 ch._mark(); n_chunks += 1
         log("mountains: region %d,%d" % (rx, rz))
     return n_chunks, added
+
+
+# ---------------------------------------------------------------- challenge worlds
+import re as _re
+from . import nbt as _N
+
+# a modest survival starter kit (TU0 numeric item ids)
+_STARTER = [(6, 4, 0), (295, 8, 0), (338, 2, 0), (338, 0x2, 0), (352, 3, 0)]
+# classic Skyblock chest
+_SKYBLOCK_CHEST = [
+    (327, 1, 0),   # lava bucket
+    (79, 2, 0),    # ice x2
+    (6, 2, 0),     # saplings
+    (81, 1, 0),    # cactus
+    (338, 1, 0),   # sugar cane
+    (295, 1, 0),   # seeds
+    (39, 1, 0), (40, 1, 0),   # brown / red mushroom
+    (361, 1, 0), (362, 1, 0), # pumpkin / melon seeds
+    (352, 3, 0),   # bone x3
+    (325, 1, 0),   # bucket
+]
+
+
+def _extent(world):
+    xs, zs = [], []
+    for name in world._filedata:
+        m = _re.match(r"r\.(-?\d+)\.(-?\d+)\.mcr$", name)
+        if m:
+            rx, rz = int(m.group(1)), int(m.group(2))
+            xs += [rx * 32 * 16, (rx * 32 + 31) * 16 + 15]
+            zs += [rz * 32 * 16, (rz * 32 + 31) * 16 + 15]
+    if not xs:
+        return None
+    return min(xs), min(zs), max(xs), max(zs)
+
+
+def _tree(world, x, y, z):
+    for i in range(4):
+        world.set_block(x, y + i, z, 17, 0)                 # oak log
+    for dy in (3, 4):
+        for dx in range(-2, 3):
+            for dz in range(-2, 3):
+                if abs(dx) == 2 and abs(dz) == 2:
+                    continue
+                if dx == 0 and dz == 0 and dy == 3:
+                    continue
+                world.set_block(x + dx, y + dy, z + dz, 18, 0)   # leaves
+    world.set_block(x, y + 4, z, 18, 0)
+    world.set_block(x, y + 5, z, 18, 0)
+
+
+def _island(world, cx, cy, cz, r=7):
+    for dx in range(-r, r + 1):
+        for dz in range(-r, r + 1):
+            d2 = dx * dx + dz * dz
+            if d2 <= r * r:
+                depth = 3 if d2 <= (r - 2) ** 2 else 1
+                for k in range(1, depth + 1):
+                    world.set_block(cx + dx, cy - k, cz + dz, 3, 0)   # dirt
+                world.set_block(cx + dx, cy, cz + dz, 2, 0)           # grass
+
+
+def _add_chest(world, x, y, z, items):
+    world.set_block(x, y, z, 54, 0)                         # chest block
+    ch = world.chunk(x >> 4, z >> 4)
+    if ch is None:
+        return
+    te = _N.Compound()
+    te.set("id", _N.STRING, "Chest")
+    te.set("x", _N.INT, x); te.set("y", _N.INT, y); te.set("z", _N.INT, z)
+    lst = _N.List(_N.COMPOUND, [])
+    for slot, (iid, cnt, dmg) in enumerate(items):
+        it = _N.Compound()
+        it.set("id", _N.SHORT, iid); it.set("Count", _N.BYTE, cnt)
+        it.set("Damage", _N.SHORT, dmg); it.set("Slot", _N.BYTE, slot)
+        lst.items.append(it)
+    te.set("Items", _N.LIST, lst)
+    ch.add_tile_entity(te)
+
+
+CHALLENGES = ("skyblock", "one-chunk", "void", "island")
+
+
+def generate_challenge(world, kind="skyblock", log=print):
+    """Wipe an (old-NBT) world to the void and build a ready-to-play challenge start:
+    skyblock, one-chunk, void, or a survival island. Sets the spawn, moves every player
+    onto it in survival with an empty inventory, and stocks a starter chest. Operates in
+    place — run it on a COPY (or save to a new folder)."""
+    kind = kind.lower().replace(" ", "-")
+    if kind not in CHALLENGES:
+        raise ValueError("unknown challenge %r (use: %s)" % (kind, ", ".join(CHALLENGES)))
+    ext = _extent(world)
+    if ext:
+        log("clearing world to the void…")
+        world.fill(ext[0], 0, ext[1], ext[2], 127, ext[3], 0)      # void everything
+    sx, sy, sz = 0, 65, 0
+    if kind == "void":
+        world.fill(-1, 64, -1, 1, 64, 1, 20)                       # glass platform
+    elif kind == "one-chunk":
+        world.fill(0, 0, 0, 15, 0, 15, 7)                          # bedrock
+        world.fill(0, 1, 0, 15, 59, 15, 1)                         # stone
+        world.fill(0, 60, 0, 15, 62, 15, 3)                        # dirt
+        world.fill(0, 63, 0, 15, 63, 15, 2)                        # grass
+        _tree(world, 4, 64, 4)
+        _add_chest(world, 8, 64, 8, _STARTER)
+        sx, sy, sz = 8, 64, 8
+    elif kind == "island":
+        _island(world, 0, 63, 0, r=7)
+        for tx, tz in ((-3, -3), (3, 2), (-2, 4)):
+            _tree(world, tx, 64, tz)
+        _add_chest(world, 1, 64, 0, _STARTER)
+        sx, sy, sz = 0, 64, 0
+    else:  # skyblock
+        world.fill(-1, 62, -1, 1, 63, 1, 3)                        # dirt cube
+        world.fill(-1, 64, -1, 1, 64, 1, 2)                        # grass top
+        _tree(world, -1, 65, -1)
+        _add_chest(world, 1, 65, 1, _SKYBLOCK_CHEST)
+        world.fill(6, 64, 0, 8, 64, 2, 12)                         # sand side-island
+        world.set_block(7, 65, 1, 81, 0)                           # cactus
+        sx, sy, sz = 0, 65, 0
+    log("placed %s at spawn (%d,%d,%d)" % (kind, sx, sy, sz))
+    world.set_spawn(sx, sy, sz)
+    world.set_level("LevelName", "%s Challenge" % kind.replace("-", " ").title())
+    n = 0
+    for pkey in (world.players() or []):
+        world.edit_player(pkey, pos=(sx + 0.5, float(sy), sz + 0.5), spawn=(sx, sy, sz),
+                          gametype=0, health=20, food=20, clear_inventory=True)
+        n += 1
+    log("moved %d player(s) to spawn in survival" % n)
+    return {"kind": kind, "spawn": (sx, sy, sz), "players": n}

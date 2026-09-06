@@ -1379,6 +1379,19 @@ class Studio(tk.Tk):
                   foreground="#666", wraplength=820, justify="left").grid(
             row=1, column=0, columnspan=2, padx=8, sticky="w")
 
+        cw = ttk.LabelFrame(f, text="Challenge worlds  (uses the open world as a base → new save)")
+        cw.pack(fill="x", padx=10, pady=10)
+        for i, (label, kind) in enumerate([("🏝  Skyblock", "skyblock"), ("🟫  One-Chunk", "one-chunk"),
+                                           ("⬛  Void", "void"), ("🌴  Survival island", "island")]):
+            ttk.Button(cw, text=label, width=18,
+                       command=lambda k=kind: self.tool_challenge(k)).grid(
+                row=0, column=i, padx=(8 if i == 0 else 4), pady=6, sticky="w")
+        ttk.Label(cw, text="Wipes the open world to the void and builds a ready-to-play challenge start "
+                           "(spawn set, players moved to survival with an empty inventory, a starter chest) "
+                           "— written to a NEW folder; the open save is not changed.",
+                  foreground="#666", wraplength=820, justify="left").grid(
+            row=1, column=0, columnspan=4, padx=8, sticky="w")
+
         pa = ttk.LabelFrame(f, text="Pixel art & 3D objects  →  buildable schematics")
         pa.pack(fill="x", padx=10, pady=10)
         ttk.Button(pa, text="🎨  Image → pixel art…", width=26,
@@ -3215,6 +3228,31 @@ class Studio(tk.Tk):
         from . import voxelize
         gen = lambda: voxelize.obj_to_arrays(obj, size=size, block=None, solid=solid)
         self._deliver_schem(gen, os.path.splitext(os.path.basename(obj))[0] + ".schematic", "3D model", preview=False)
+
+    def tool_challenge(self, kind):
+        if not self.path:
+            messagebox.showinfo("Challenge world", "Open a base world first — any old-NBT (TU0) world. "
+                                "Its level.dat and player profiles are reused; the terrain is replaced. "
+                                "The open save itself is not changed."); return
+        pretty = kind.replace("-", " ").title()
+        out = filedialog.askdirectory(title="Save the %s world into this folder" % pretty)
+        if not out:
+            return
+        src = self.path
+        from . import worldgen
+
+        def work():
+            w = World.open(src)                          # fresh copy -> the editor's world is untouched
+            st = worldgen.generate_challenge(w, kind, log=self._logcb())
+            return w.save(out=out, backup=False, progress=self._progress), st
+
+        def done(r):
+            path, st = r
+            messagebox.showinfo("Challenge world",
+                                "Built a %s world.\n\nSpawn: %s · %d player(s) moved to survival with a "
+                                "starter chest.\n\nSaved to:\n%s\n\nOpen it from the Library or File → Open."
+                                % (pretty, st["spawn"], st["players"], path))
+        self._run_async(work, on_done=done, msg="Generating %s world…" % pretty)
 
     def tool_flatten(self):
         if not self._guard() or not self.world:
