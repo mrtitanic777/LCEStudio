@@ -500,8 +500,8 @@ class Studio(tk.Tk):
         self.map_canvas.configure(xscrollcommand=hb.set, yscrollcommand=vb.set)
         self.map_canvas.grid(row=0, column=0, sticky="nsew")
         vb.grid(row=0, column=1, sticky="ns"); hb.grid(row=1, column=0, sticky="ew")
-        # POI panel (right column) -- structures list + filter
-        poip = ttk.Frame(wrap, width=250); poip.grid(row=0, column=2, rowspan=2, sticky="ns", padx=(6, 0))
+        # right column -- structures + waypoints
+        poip = ttk.Frame(wrap, width=272); poip.grid(row=0, column=2, rowspan=2, sticky="ns", padx=(6, 0))
         poip.grid_propagate(False)
         top = ttk.Frame(poip); top.pack(fill="x")
         ttk.Label(top, text="Structures", style="Section.TLabel").pack(side="left")
@@ -509,12 +509,45 @@ class Studio(tk.Tk):
         fcb = ttk.Combobox(top, textvariable=self.poi_filter, width=10, state="readonly",
                            values=("all", "dungeon", "loot", "stronghold", "portal", "build", "sign"))
         fcb.pack(side="right"); fcb.bind("<<ComboboxSelected>>", lambda e: self._poi_fill_list())
-        self.poi_tree = ttk.Treeview(poip, columns=("t", "pos"), show="headings", height=20)
+        self.poi_tree = ttk.Treeview(poip, columns=("t", "pos"), show="headings", height=9)
         self.poi_tree.heading("t", text="What"); self.poi_tree.heading("pos", text="X / Z")
-        self.poi_tree.column("t", width=150); self.poi_tree.column("pos", width=88)
-        self.poi_tree.pack(fill="both", expand=True, pady=4)
+        self.poi_tree.column("t", width=162); self.poi_tree.column("pos", width=88)
+        self.poi_tree.pack(fill="x", pady=(2, 2))
         self.poi_tree.bind("<<TreeviewSelect>>", self._on_poi_pick)
         self._pois = []
+
+        # -- Waypoints --
+        self._hr(poip).pack(fill="x", pady=(8, 6))
+        wt = ttk.Frame(poip); wt.pack(fill="x")
+        ttk.Label(wt, text="Waypoints", style="Section.TLabel").pack(side="left")
+        addmb = ttk.Menubutton(wt, text="＋ Add", style="Card.TButton")
+        addmenu = tk.Menu(addmb, tearoff=0)
+        addmenu.add_command(label="At spawn", command=self._wp_add_spawn)
+        addmenu.add_command(label="At player position", command=self._wp_add_player)
+        addmenu.add_command(label="At coordinates…", command=self._wp_add_coords)
+        addmenu.add_separator()
+        addmenu.add_command(label="Import found structures", command=self._wp_import_pois)
+        addmb["menu"] = addmenu; addmb.pack(side="right")
+        self.wp_tree = ttk.Treeview(poip, columns=("n", "pos"), show="headings", height=8)
+        self.wp_tree.heading("n", text="Waypoint"); self.wp_tree.heading("pos", text="X / Z")
+        self.wp_tree.column("n", width=162); self.wp_tree.column("pos", width=88)
+        self.wp_tree.pack(fill="x", pady=(2, 2))
+        self.wp_tree.bind("<<TreeviewSelect>>", self._on_wp_pick)
+        pr = ttk.Frame(poip); pr.pack(fill="x", pady=(2, 2))
+        ttk.Label(pr, text="Player", style="Muted.TLabel").pack(side="left")
+        self.wp_player = tk.StringVar(value="All players")
+        self.wp_player_cb = ttk.Combobox(pr, textvariable=self.wp_player, width=18, state="readonly")
+        self.wp_player_cb.pack(side="left", padx=(6, 0))
+        br = ttk.Frame(poip); br.pack(fill="x", pady=(2, 2))
+        ttk.Button(br, text="Teleport →", style="Accent.TButton", command=self._wp_teleport).pack(side="left")
+        self.wp_snap = tk.BooleanVar(value=True)
+        ttk.Checkbutton(br, text="snap to surface", variable=self.wp_snap).pack(side="left", padx=(8, 0))
+        br2 = ttk.Frame(poip); br2.pack(fill="x", pady=(2, 2))
+        ttk.Button(br2, text="Rename", style="Card.TButton", command=self._wp_rename).pack(side="left")
+        ttk.Button(br2, text="Delete", style="Card.TButton", command=self._wp_delete).pack(side="left", padx=4)
+        self.wp_drop = tk.BooleanVar(value=False)
+        ttk.Checkbutton(br2, text="drop pin on click", variable=self.wp_drop).pack(side="left", padx=(8, 0))
+        self._waypoints = []
         wrap.rowconfigure(0, weight=1); wrap.columnconfigure(0, weight=1)
         self.map_canvas.bind("<Button-1>", self.on_map_click)
         self.map_canvas.bind("<Double-Button-1>", self.on_map_dblclick)
@@ -618,6 +651,7 @@ class Studio(tk.Tk):
             self.map_canvas.configure(scrollregion=(0, 0, max(cw, ix + big.width),
                                                     max(ch, iy + big.height)))
             self._draw_poi_markers()
+            self._draw_wp_markers()
             self.status.set("Map rendered.")
             self._rendering = False
             if getattr(self, "_render_pending", False):
@@ -696,6 +730,12 @@ class Studio(tk.Tk):
             self.map_canvas.scan_mark(ev.x, ev.y)           # begin drag-to-pan
             return
         wx, wz = self._canvas_to_world(ev)
+        if getattr(self, "wp_drop", None) and self.wp_drop.get():   # drop-a-pin mode
+            nm = simpledialog.askstring("Drop waypoint", "Name for waypoint at %d, %d:" % (wx, wz))
+            if nm:
+                y = self._surface_y(wx, wz, 0) or 64
+                self._wp_add(nm, wx, y, wz, 0)
+            return
         try:
             top = self.world.chunk(wx >> 4, wz >> 4)
             info = ""
@@ -794,6 +834,166 @@ class Studio(tk.Tk):
             pass
         self.map_read.set("%s  @  X %d  Y %d  Z %d  (dim %d)" %
                           (p["label"], p["x"], p["y"], p["z"], p.get("dim", 0)))
+
+    # -- Waypoints --
+    def _wp_load(self):
+        from . import waypoints as WP
+        self._waypoints = WP.load(self.path) if self.path else []
+        self._wp_fill_list(); self._wp_refresh_players()
+
+    def _wp_save(self):
+        from . import waypoints as WP
+        if self.path:
+            WP.store(self.path, self._waypoints)
+
+    def _wp_refresh_players(self):
+        if not hasattr(self, "wp_player_cb"):
+            return
+        labels = ["All players"]
+        if self.world:
+            labels += [k.split("/")[-1].replace(".dat", "") for k in self.world.players()]
+        self.wp_player_cb["values"] = labels
+        if self.wp_player.get() not in labels:
+            self.wp_player.set("All players")
+
+    def _wp_fill_list(self):
+        if not hasattr(self, "wp_tree"):
+            return
+        from . import waypoints as WP
+        self.wp_tree.delete(*self.wp_tree.get_children())
+        for i, w in enumerate(self._waypoints):
+            dim = w.get("dim", 0)
+            pos = "%d, %d%s" % (w["x"], w["z"], "" if dim == 0 else "  " + WP.DIM_NAME.get(dim, "")[:1])
+            self.wp_tree.insert("", "end", iid=str(i), values=(w.get("name", "wp"), pos))
+
+    def _wp_add(self, name, x, y, z, dim=0):
+        from . import waypoints as WP
+        self._waypoints.append({"name": name, "x": int(x), "y": int(y), "z": int(z),
+                                "dim": int(dim), "color": WP.COLORS[len(self._waypoints) % len(WP.COLORS)],
+                                "note": ""})
+        self._wp_save(); self._wp_fill_list(); self._draw_wp_markers()
+        self.status.set("Added waypoint “%s” at %d, %d, %d" % (name, x, y, z))
+
+    def _wp_add_spawn(self):
+        if not self._guard():
+            return
+        sx, sy, sz = self.world.get_spawn() or (0, 64, 0)
+        self._wp_add("Spawn", sx, sy, sz, 0)
+
+    def _wp_add_player(self):
+        if not self._guard():
+            return
+        p = self.world.get_player_pos()
+        if not p:
+            messagebox.showinfo("Waypoint", "No player position found."); return
+        self._wp_add("Player spot", int(p[0]), int(p[1]), int(p[2]), 0)
+
+    def _wp_add_coords(self):
+        if not self._guard():
+            return
+        s = simpledialog.askstring("Add waypoint", "Name then X Y Z  (e.g.  Base 100 64 -20):")
+        if not s:
+            return
+        try:
+            parts = s.rsplit(None, 3)
+            name = parts[0] if len(parts) == 4 else "Waypoint"
+            x, y, z = (int(v) for v in parts[-3:])
+        except Exception:
+            messagebox.showerror("Waypoint", "Enter a name then three whole numbers: Name X Y Z"); return
+        self._wp_add(name, x, y, z, 0)
+
+    def _wp_import_pois(self):
+        if not getattr(self, "_pois", None):
+            messagebox.showinfo("Waypoints", "Run “🔍 Find structures” first, then import them."); return
+        for p in self._pois:
+            self._waypoints.append({"name": p["label"], "x": p["x"], "y": p["y"], "z": p["z"],
+                                    "dim": p.get("dim", 0), "color": "#ffd24a", "note": "structure"})
+        self._wp_save(); self._wp_fill_list(); self._draw_wp_markers()
+        self.status.set("Imported %d structures as waypoints" % len(self._pois))
+
+    def _wp_selected(self):
+        sel = self.wp_tree.selection()
+        return self._waypoints[int(sel[0])] if sel else None
+
+    def _wp_delete(self):
+        sel = self.wp_tree.selection()
+        if not sel:
+            return
+        del self._waypoints[int(sel[0])]
+        self._wp_save(); self._wp_fill_list(); self._draw_wp_markers()
+
+    def _wp_rename(self):
+        w = self._wp_selected()
+        if not w:
+            return
+        nm = simpledialog.askstring("Rename waypoint", "New name:", initialvalue=w.get("name", ""))
+        if nm:
+            w["name"] = nm; self._wp_save(); self._wp_fill_list()
+
+    def _on_wp_pick(self, _ev=None):
+        from . import waypoints as WP
+        self._draw_wp_markers()
+        w = self._wp_selected()
+        if not w:
+            return
+        if w.get("dim", 0) == 0 and not getattr(self, "_map_is_iso", False):
+            px, py = self._world_to_canvas(w["x"], w["z"])
+            try:
+                reg = self.map_canvas.cget("scrollregion").split()
+                self.map_canvas.xview_moveto(max(0, (px - 200)) / max(1, float(reg[2])))
+                self.map_canvas.yview_moveto(max(0, (py - 150)) / max(1, float(reg[3])))
+            except Exception:
+                pass
+        self.map_read.set("%s  @  X %d  Y %d  Z %d  (%s)" %
+                          (w.get("name"), w["x"], w["y"], w["z"], WP.DIM_NAME.get(w.get("dim", 0), "")))
+
+    def _draw_wp_markers(self):
+        c = self.map_canvas; c.delete("wp")
+        if getattr(self, "_map_is_iso", False) or not getattr(self, "_waypoints", None):
+            return
+        sel = self.wp_tree.selection() if hasattr(self, "wp_tree") else ()
+        selid = int(sel[0]) if sel else -1
+        for i, w in enumerate(self._waypoints):
+            if w.get("dim", 0) != 0:                        # markers are overworld-only
+                continue
+            px, py = self._world_to_canvas(w["x"], w["z"])
+            col = w.get("color", "#39c0ff")
+            r = 6 if i == selid else 4
+            c.create_polygon(px, py - r, px + r, py, px, py + r, px - r, py,   # diamond (vs POI ovals)
+                             fill=col, outline="#000", width=2 if i == selid else 1, tags="wp")
+            if i == selid:
+                c.create_text(px, py - 13, text=w.get("name", "")[:24], fill="#fff",
+                              font=("Segoe UI", 8, "bold"), tags="wp")
+
+    def _surface_y(self, x, z, dim=0):
+        """Highest solid block +1 at (x,z) for a safe landing, or None."""
+        nether = (dim == -1)
+        for yy in range(126 if nether else 127, 0, -1):
+            b = self.world.get_block(x, yy, z, nether=nether)
+            if b not in (0, None):
+                return yy + 1
+        return None
+
+    def _wp_teleport(self):
+        if not self._guard():
+            return
+        w = self._wp_selected()
+        if not w:
+            messagebox.showinfo("Teleport", "Select a waypoint first."); return
+        dim = w.get("dim", 0); x, z = w["x"], w["z"]; y = w["y"]
+        if self.wp_snap.get() and dim in (0, -1):
+            sy = self._surface_y(x, z, dim)
+            if sy is not None:
+                y = sy
+        sel = self.wp_player.get()
+        keys = self.world.players() if sel == "All players" else ["players/%s.dat" % sel]
+        n = 0
+        for k in keys:
+            self.world.edit_player(k, pos=(x + 0.5, float(y), z + 0.5), dimension=dim); n += 1
+        self.status.set("Teleported %d player(s) to “%s” (%d,%d,%d) — Save to write." % (n, w.get("name"), x, y, z))
+        messagebox.showinfo("Teleport", "Moved %d player(s) to “%s” at %d, %d, %d.\n\n"
+                            "Use File → Save (Ctrl+S) to write it (a .bak backup is kept)."
+                            % (n, w.get("name"), x, y, z))
 
     def on_export_iso(self):
         if not self._guard():
@@ -2643,6 +2843,7 @@ class Studio(tk.Tk):
         self.path = path
         self._map_vw = None                          # drop the cached map world for the old save
         self._nbt_index = None                       # stale search index for the old save
+        self._wp_load()                              # this world's waypoints
         self.refresh_all()
         self._update_chrome()
         self.status.set("Opened: %s" % path)
