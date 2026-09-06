@@ -1245,8 +1245,32 @@ class Studio(tk.Tk):
     def _build_nbt(self):
         wrap = ttk.Frame(self.tab_nbt, padding=(16, 14)); wrap.pack(fill="both", expand=True)
         ttk.Label(wrap, text="NBT INSPECTOR", style="Section.TLabel").pack(anchor="w")
-        ttk.Label(wrap, text="Read the raw NBT tree of any file in the save (level.dat, player profiles, "
-                           "map data…).", style="Muted.TLabel").pack(anchor="w", pady=(2, 12))
+        ttk.Label(wrap, text="Search the whole save for anything, or read the raw NBT tree of a file.",
+                  style="Muted.TLabel").pack(anchor="w", pady=(2, 10))
+
+        # ---- global search ----
+        self._nbt_index = None; self._nbt_hits = []
+        sr = ttk.Frame(wrap); sr.pack(fill="x")
+        ttk.Label(sr, text="Search entire save", style="Value.TLabel").pack(side="left")
+        self.nbt_query = tk.StringVar()
+        se = ttk.Entry(sr, textvariable=self.nbt_query, width=30)
+        se.pack(side="left", padx=(10, 6)); se.bind("<Return>", lambda e: self.on_nbt_search())
+        ttk.Button(sr, text="Search", style="Accent.TButton", command=self.on_nbt_search).pack(side="left")
+        self.nbt_search_status = tk.StringVar(value="")
+        ttk.Label(sr, textvariable=self.nbt_search_status, style="Muted.TLabel").pack(side="left", padx=12)
+        ttk.Label(wrap, text="e.g. spawner · diamond sword · minecraft:chest · a sign’s text · a player name",
+                  style="Muted.TLabel").pack(anchor="w", pady=(2, 4))
+        rw = ttk.Frame(wrap); rw.pack(fill="x", pady=(0, 4))
+        self.nbt_results = ttk.Treeview(rw, columns=("what", "where", "pos"), show="headings", height=6)
+        self.nbt_results.heading("what", text="Match"); self.nbt_results.heading("where", text="Where")
+        self.nbt_results.heading("pos", text="Position")
+        self.nbt_results.column("what", width=300); self.nbt_results.column("where", width=200)
+        self.nbt_results.column("pos", width=110)
+        rvs = ttk.Scrollbar(rw, orient="vertical", command=self.nbt_results.yview)
+        self.nbt_results.configure(yscrollcommand=rvs.set)
+        self.nbt_results.pack(side="left", fill="x", expand=True); rvs.pack(side="right", fill="y")
+        self.nbt_results.bind("<<TreeviewSelect>>", self._on_nbt_result)
+        self._hr(wrap).pack(fill="x", pady=12)
 
         bar = ttk.Frame(wrap); bar.pack(fill="x", pady=(0, 10))
         ttk.Label(bar, text="File", style="Muted.TLabel").pack(side="left")
@@ -1273,6 +1297,44 @@ class Studio(tk.Tk):
                 walk(ch)
         for it in self.nbt_tree.get_children(""):
             walk(it)
+
+    def on_nbt_search(self):
+        if not self._guard():
+            return
+        q = self.nbt_query.get().strip()
+        if not q:
+            self.nbt_search_status.set("Type something to search for."); return
+        if self._nbt_index is not None:                 # already indexed -> instant
+            self._nbt_do_filter(q); return
+        world = self.world
+        from . import nbtsearch as S                     # first search: index the save once
+        self._run_async(lambda: S.build_index(world, log=self._logcb()),
+                        on_done=lambda idx: (setattr(self, "_nbt_index", idx), self._nbt_do_filter(q)),
+                        msg="Indexing save for search…")
+
+    def _nbt_do_filter(self, q):
+        from . import nbtsearch as S
+        hits = S.filter_index(self._nbt_index or [], q)
+        self._nbt_hits = hits
+        self.nbt_results.delete(*self.nbt_results.get_children())
+        for i, h in enumerate(hits):
+            pos = h.get("pos")
+            postxt = ("%d, %d, %d" % pos) if pos and all(v is not None for v in pos) else ""
+            self.nbt_results.insert("", "end", iid=str(i),
+                                    values=(h["summary"][:52], h["where"], postxt))
+        self.nbt_search_status.set("%d match%s for “%s”  (click one to inspect)"
+                                   % (len(hits), "" if len(hits) == 1 else "es", q))
+
+    def _on_nbt_result(self, _ev=None):
+        sel = self.nbt_results.selection()
+        if not sel:
+            return
+        h = self._nbt_hits[int(sel[0])]
+        self.nbt_tree.delete(*self.nbt_tree.get_children())
+        label = "%s  @  %s" % (h["id"], h["where"])
+        self._insert_nbt("", label, N.Tag(N.COMPOUND, h["tag"]))
+        for it in self.nbt_tree.get_children(""):
+            self.nbt_tree.item(it, open=True)
 
     # ---------------------------------------------------------------- Tools
     def _build_tools(self):
@@ -2502,6 +2564,7 @@ class Studio(tk.Tk):
         self.world, self._save_meta = r
         self.path = path
         self._map_vw = None                          # drop the cached map world for the old save
+        self._nbt_index = None                       # stale search index for the old save
         self.refresh_all()
         self._update_chrome()
         self.status.set("Opened: %s" % path)
