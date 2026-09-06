@@ -43,6 +43,19 @@ use bundled DLLs.
 - **World Timelapse** — a snapshot is captured every time you save; scrub the history as
   isometric frames and restore any older version (a visual undo across sessions).
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshot-convert.png" alt="Convert tab"><br><b>Cross-platform converter</b> — Xbox 360 ↔ PS3 ↔ Windows LCE, export to Java, change title update, re-sign a CON.</td>
+    <td width="50%"><img src="docs/screenshot-nbt.png" alt="Global NBT search"><br><b>Global NBT search</b> — find any item, entity, sign or tag across the whole save and open its tree.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshot-inventory.png" alt="Inventory editor"><br><b>Inventory editor</b> — a Minecraft-style slot grid with searchable block/item name dropdowns.</td>
+    <td width="50%"><img src="docs/screenshot-timelapse.png" alt="World Timelapse"><br><b>World Timelapse</b> — a snapshot every save; scrub the history and restore any version.</td>
+  </tr>
+</table>
+
 ## Run it
 
 **Standalone (no Python needed)** — download **[`LCEStudio.exe`](https://github.com/mrtitanic777/LCEStudio/releases/latest/download/LCEStudio.exe)**
