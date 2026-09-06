@@ -91,7 +91,6 @@ def describe(path, platform):
     try:
         from .converter import lce_engine as E
         payload, _name, _thumb = E.read_console_input(path, platform)
-        endian = "big"
-        return E.describe_world(payload, endian, platform)
+        return E.describe_world(payload, ">", platform)   # console payloads are big-endian
     except Exception:
         return None

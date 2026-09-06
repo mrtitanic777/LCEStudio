@@ -1393,6 +1393,9 @@ class Studio(tk.Tk):
         self.lib_grid = self._vscroll(outer)
         self._lib_photos = []
         self._lib_worlds = []; self._lib_imgs = []
+        self._lib_tip = None; self._lib_tip_label = None; self._lib_hover_w = None
+        self._lib_show_job = None; self._lib_hide_job = None
+        self._lib_detail_cache = {}; self._lib_detail_pending = set()
         self._refresh_folders_label()
 
     def _refresh_folders_label(self):
@@ -1456,6 +1459,7 @@ class Studio(tk.Tk):
         self._lib_render(pairs, q)
 
     def _lib_render(self, pairs, q=""):
+        self._lib_hide_tip()
         for ch in self.lib_grid.winfo_children():
             ch.destroy()
         self._lib_photos = []
@@ -1498,7 +1502,119 @@ class Studio(tk.Tk):
                    command=lambda ww=w: self._lib_convert(ww)).pack(side="left", padx=3)
         ttk.Button(bar, text="Repair", style="Card.TButton",
                    command=lambda ww=w: self._lib_repair(ww)).pack(side="left")
+        self._lib_bind_hover(card, w)
         return card
+
+    def _lib_bind_hover(self, card, w):
+        """Show a detail tooltip after a short hover; debounced so moving between the
+        card and its child widgets doesn't flicker it off."""
+        def enter(_e):
+            self._lib_hover_w = w
+            if self._lib_hide_job:
+                self.after_cancel(self._lib_hide_job); self._lib_hide_job = None
+            if self._lib_show_job:
+                self.after_cancel(self._lib_show_job)
+            self._lib_show_job = self.after(400, lambda: self._lib_hover_show(w, card))
+
+        def leave(_e):
+            if self._lib_show_job:
+                self.after_cancel(self._lib_show_job); self._lib_show_job = None
+            if self._lib_hide_job:
+                self.after_cancel(self._lib_hide_job)
+            self._lib_hide_job = self.after(140, self._lib_hide_tip)
+
+        def bind_deep(widget):
+            widget.bind("<Enter>", enter, add="+")
+            widget.bind("<Leave>", leave, add="+")
+            for ch in widget.winfo_children():
+                bind_deep(ch)
+        bind_deep(card)
+
+    def _lib_hover_show(self, w, card):
+        self._lib_show_job = None
+        if not card.winfo_exists() or self._lib_hover_w is not w:
+            return
+        detail = self._lib_detail_cache.get(w["path"])
+        if detail is None and w["path"] not in self._lib_detail_pending:
+            self._lib_detail_pending.add(w["path"])
+            self._lib_describe_async(w)
+        x = self.winfo_pointerx() + 16
+        y = self.winfo_pointery() + 14
+        if x + 300 > self.winfo_screenwidth():
+            x = self.winfo_pointerx() - 312
+        self._lib_show_tip(x, y, self._lib_detail_text(w, detail))
+
+    def _lib_describe_async(self, w):
+        def worker():
+            from . import library as L
+            d = L.describe(w["path"], w["platform"])
+            self._post(lambda: self._lib_describe_done(w, d))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _lib_describe_done(self, w, d):
+        self._lib_detail_pending.discard(w["path"])
+        self._lib_detail_cache[w["path"]] = d if d else "FAILED"
+        if (self._lib_hover_w is w and self._lib_tip is not None
+                and self._lib_tip.winfo_exists() and self._lib_tip.winfo_viewable()):
+            self._lib_tip_label.config(text=self._lib_detail_text(w, self._lib_detail_cache[w["path"]]))
+
+    def _lib_detail_text(self, w, detail):
+        from . import library as L
+        head = "%s\n%s  ·  %s" % (w["name"], L.PLATFORM_LABEL.get(w["platform"], w["platform"]),
+                                  w.get("tu") or "TU ?")
+        if detail is None:
+            return head + "\n\nReading world…"
+        if detail == "FAILED":
+            return head + "\n\n(details unavailable for this platform)"
+        rows = []
+        lvl = detail.get("level_name")
+        if lvl and lvl.strip() and lvl != w["name"]:
+            rows.append(("Level name", lvl))
+        tur = detail.get("title_update_range") or detail.get("title_update")
+        if tur:
+            rows.append(("Title update", tur))
+        sz = detail.get("size_label"); ch = detail.get("size_chunks")
+        if sz:
+            rows.append(("Size", "%s%s" % (sz, ("  (%s² chunks)" % ch) if ch else "")))
+        dims = detail.get("dimensions")
+        if dims:
+            rows.append(("Dimensions", ", ".join(dims)))
+        cf = detail.get("chunk_format")
+        if cf:
+            rows.append(("Chunk format", cf))
+        seed = detail.get("seed")
+        if seed is not None:
+            rows.append(("Seed", str(seed)))
+        sp = detail.get("spawn")
+        if sp and any(v is not None for v in sp):
+            rows.append(("Spawn", "%s, %s, %s" % tuple(sp)))
+        gen = detail.get("generator_name")
+        if gen:
+            rows.append(("Generator", gen))
+        body = "\n".join("%-13s %s" % (k + ":", v) for k, v in rows)
+        return head + "\n\n" + body if body else head
+
+    def _lib_show_tip(self, x, y, text):
+        if self._lib_tip is None or not self._lib_tip.winfo_exists():
+            p = self.THEMES[self.theme]
+            self._lib_tip = tk.Toplevel(self)
+            self._lib_tip.wm_overrideredirect(True)
+            frm = tk.Frame(self._lib_tip, background=p["FIELD"],
+                           highlightbackground=p["LINE"], highlightthickness=1)
+            frm.pack()
+            self._lib_tip_label = tk.Label(frm, justify="left", anchor="w",
+                                           background=p["FIELD"], foreground=p["INK"],
+                                           font=("Segoe UI", 9), padx=11, pady=9)
+            self._lib_tip_label.pack()
+        self._lib_tip_label.config(text=text)
+        self._lib_tip.wm_geometry("+%d+%d" % (max(0, x), max(0, y)))
+        self._lib_tip.deiconify(); self._lib_tip.lift()
+
+    def _lib_hide_tip(self):
+        self._lib_hide_job = None
+        self._lib_hover_w = None
+        if self._lib_tip is not None and self._lib_tip.winfo_exists():
+            self._lib_tip.withdraw()
 
     def _lib_open(self, w):
         from . import library as L
