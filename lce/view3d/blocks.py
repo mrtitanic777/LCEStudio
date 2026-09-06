@@ -1,7 +1,12 @@
-"""Block id -> display colour + flags, for the Alpha/Beta-era block set.
+"""Block id -> display colour + flags, for the FULL Legacy Console Edition block
+set (ids 0-252: the Beta blocks in ``_TABLE`` plus every TU-era block in
+``_LCE_EXT`` — concrete, terracotta, quartz, prismarine, purpur, shulker/glazed,
+the new wood families, redstone gear, …). Names come from ``lce.names.BLOCK_NAMES``.
 
-Colours are approximate top-of-block tints; refine later or swap for real
-textures. Unknown ids fall back to a magenta so they stand out."""
+Blocks with a real terrain.png tile use it (``_FACE_TILES``); the rest render as a
+neutral tile tinted by their curated flat colour, so a block always shows in a
+faithful colour. Only a genuinely unknown id (none, in practice) falls back to a
+neutral grey — NOT the old magenta 'pink wool' that TU-era blocks used to show."""
 
 # id: (name, (r,g,b), solid_opaque)
 _TABLE = {
@@ -87,14 +92,103 @@ _TABLE = {
     94: ("repeater",       (150, 150, 150),  False),
     96: ("trapdoor",       (140, 110, 70),   False),
 }
-_DEFAULT = ("unknown", (230, 60, 220), True)
+# truly-unknown ids (none, once _LCE_EXT below is applied) get a neutral grey, NOT
+# a garish magenta — the old magenta was the "pink wool" seen on any TU-era block.
+_DEFAULT = ("unknown", (140, 140, 146), True)
+
+# 16 dye colours (Minecraft order 0..15), for the per-colour block families below.
+_DYE = [
+    (221, 223, 225), (219, 125, 62), (179, 80, 188), (107, 138, 201),   # white orange magenta lightblue
+    (203, 192, 63),  (128, 179, 53), (211, 128, 159), (86, 91, 91),     # yellow lime pink gray
+    (159, 165, 165), (58, 121, 140), (130, 66, 176),  (49, 66, 156),    # lightgray cyan purple blue
+    (128, 84, 51),   (77, 92, 39),   (162, 66, 60),   (37, 40, 45),     # brown green red black
+]
+
+
+def _shulker(i):    # 219..234 white..black
+    return _DYE[i - 219], True
+
+
+def _glazed(i):     # 235..250 white..black (glazed terracotta – lighter/patterned)
+    r, g, b = _DYE[i - 235]
+    return ((r + 235) // 2, (g + 235) // 2, (b + 235) // 2), True
+
+
+# id -> ((r,g,b), opaque_solid) for every LCE (TU-era) block not in _TABLE above.
+# Names come from lce.names.BLOCK_NAMES; colours are faithful top-face tints.
+_LCE_EXT = {
+    21: ((94, 108, 140), True),   22: ((38, 67, 137), True),    23: ((110, 110, 110), True),
+    25: ((110, 78, 52), True),    27: ((150, 120, 70), False),  28: ((150, 120, 70), False),
+    29: ((150, 145, 100), True),  30: ((235, 235, 235), False), 32: ((150, 118, 66), True),
+    33: ((150, 140, 110), True),  34: ((160, 150, 120), True),  36: ((150, 140, 110), True),
+    70: ((127, 127, 127), False), 72: ((156, 127, 78), False),  84: ((110, 78, 60), True),
+    95: ((236, 236, 236), False), 97: ((127, 127, 127), True),  98: ((122, 122, 122), True),
+    99: ((150, 110, 85), True),   100: ((188, 74, 68), True),   101: ((140, 140, 140), False),
+    102: ((200, 226, 233), False), 103: ((110, 140, 45), True), 104: ((110, 150, 40), False),
+    105: ((110, 150, 40), False), 106: ((60, 120, 40), False),  107: ((156, 127, 78), False),
+    108: ((150, 90, 75), True),   109: ((122, 122, 122), True), 110: ((110, 95, 110), True),
+    111: ((40, 110, 40), False),  112: ((44, 22, 26), True),    113: ((44, 22, 26), False),
+    114: ((44, 22, 26), True),    115: ((140, 30, 35), False),  116: ((90, 50, 60), True),
+    117: ((120, 100, 80), False), 118: ((70, 70, 70), True),    119: ((14, 12, 26), True),
+    120: ((90, 110, 90), True),   121: ((218, 224, 158), True), 122: ((25, 20, 35), True),
+    123: ((120, 90, 55), True),   124: ((205, 165, 95), True),  125: ((156, 127, 78), True),
+    126: ((156, 127, 78), False), 127: ((130, 80, 40), True),   128: ((216, 203, 143), True),
+    129: ((110, 140, 110), True), 130: ((30, 45, 45), True),    131: ((150, 130, 90), False),
+    132: ((150, 130, 90), False), 133: ((42, 203, 111), True),  134: ((103, 80, 50), True),
+    135: ((192, 175, 121), True), 136: ((160, 115, 80), True),  138: ((92, 200, 196), False),
+    139: ((122, 122, 122), False), 140: ((120, 70, 55), False), 141: ((70, 140, 40), False),
+    142: ((70, 140, 40), False),  143: ((156, 127, 78), False), 144: ((200, 200, 190), False),
+    145: ((70, 70, 70), True),    146: ((160, 118, 56), True),  147: ((230, 200, 90), False),
+    148: ((200, 200, 200), False), 149: ((150, 150, 150), False), 150: ((170, 140, 120), False),
+    151: ((120, 110, 90), False), 152: ((170, 30, 20), True),   153: ((120, 90, 85), True),
+    154: ((70, 70, 70), False),   155: ((235, 231, 224), True), 156: ((235, 231, 224), True),
+    157: ((150, 120, 70), False), 158: ((110, 110, 110), True), 159: ((209, 178, 161), True),
+    160: ((236, 236, 236), False), 161: ((96, 123, 54), False), 162: ((120, 110, 95), True),
+    163: ((168, 90, 50), True),   164: ((66, 43, 20), True),    165: ((110, 190, 90), False),
+    166: ((190, 40, 40), False),  167: ((180, 180, 180), False), 168: ((90, 140, 130), True),
+    169: ((190, 210, 205), True), 170: ((200, 175, 40), True),  171: ((221, 223, 225), False),
+    172: ((150, 95, 66), True),   173: ((25, 25, 25), True),    174: ((140, 180, 235), True),
+    175: ((200, 180, 40), False), 176: ((160, 120, 80), False), 177: ((160, 120, 80), False),
+    178: ((120, 110, 90), False), 179: ((180, 80, 30), True),   180: ((180, 80, 30), True),
+    181: ((180, 80, 30), True),   182: ((180, 80, 30), False),  183: ((103, 80, 50), False),
+    184: ((192, 175, 121), False), 185: ((160, 115, 80), False), 186: ((66, 43, 20), False),
+    187: ((168, 90, 50), False),  188: ((103, 80, 50), False),  189: ((192, 175, 121), False),
+    190: ((160, 115, 80), False), 191: ((66, 43, 20), False),   192: ((168, 90, 50), False),
+    193: ((103, 80, 50), False),  194: ((192, 175, 121), False), 195: ((160, 115, 80), False),
+    196: ((168, 90, 50), False),  197: ((66, 43, 20), False),   198: ((230, 225, 215), False),
+    199: ((100, 70, 100), True),  200: ((150, 120, 150), False), 201: ((170, 110, 170), True),
+    202: ((172, 115, 172), True), 203: ((170, 110, 170), True), 204: ((170, 110, 170), True),
+    205: ((170, 110, 170), False), 206: ((218, 224, 158), True), 207: ((100, 140, 50), False),
+    208: ((120, 100, 60), True),  209: ((10, 10, 20), True),    212: ((150, 190, 240), False),
+    213: ((140, 55, 30), True),   214: ((110, 20, 25), True),   215: ((90, 20, 25), True),
+    216: ((200, 195, 165), True),  218: ((100, 100, 100), True),
+    251: ((207, 213, 214), True), 252: ((222, 224, 215), True),
+}
+for _sid in range(219, 235):
+    _LCE_EXT[_sid] = _shulker(_sid)
+for _gid in range(235, 251):
+    _LCE_EXT[_gid] = _glazed(_gid)
+
+try:                                            # authoritative LCE block names
+    from ..names import BLOCK_NAMES as _BLOCK_NAMES
+except Exception:
+    _BLOCK_NAMES = {}
 
 _MAXID = 256
 NAMES = [""] * _MAXID
 COLORS = [(0, 0, 0)] * _MAXID
 SOLID = [False] * _MAXID          # OPAQUE: full cube that hides neighbour faces
 for _i in range(_MAXID):
-    name, col, solid = _TABLE.get(_i, _DEFAULT if _i else _TABLE[0])
+    if _i in _TABLE:
+        name, col, solid = _TABLE[_i]
+    elif _i in _LCE_EXT:
+        col, solid = _LCE_EXT[_i]
+        name = (_BLOCK_NAMES.get(_i) or _DEFAULT[0]).lower()
+    elif _i == 0:
+        name, col, solid = _TABLE[0]
+    else:                          # named by LCE but no curated colour, or truly unknown
+        name = (_BLOCK_NAMES.get(_i) or _DEFAULT[0]).lower()
+        col, solid = _DEFAULT[1], _DEFAULT[2]
     NAMES[_i], COLORS[_i], SOLID[_i] = name, col, solid
 
 # RENDER: does the block produce any visible geometry? everything but air.
@@ -183,18 +277,25 @@ CUBE, BOX, CROSS, CROPS, TORCH, LADDER, RAIL = range(7)
 _S = 1.0 / 16.0
 _CAT = {}
 for _i in (6, 30, 31, 32, 37, 38, 39, 40, 83, 51): _CAT[_i] = CROSS   # plants, web, fire~
+# TU-era plants/crops that should draw as a cross, not a full cube
+for _i in (104, 105, 106, 111, 115, 141, 142, 175, 200, 207): _CAT[_i] = CROSS
 _CAT[59] = CROPS
 for _i in (50, 75, 76): _CAT[_i] = TORCH
 _CAT[65] = LADDER
 for _i in (27, 28, 66, 55): _CAT[_i] = RAIL                          # rails, redstone wire~
 for _i in (26, 44, 53, 60, 63, 64, 67, 68, 69, 70, 71, 72, 77, 78,
            81, 85, 92, 93, 94, 96): _CAT[_i] = BOX
+# TU-era single slabs / carpet / thin blocks -> BOX (half/thin shapes below);
+# the DOUBLE slabs (125,181,204) stay full CUBEs.
+for _i in (126, 182, 205, 171, 147, 148, 167): _CAT[_i] = BOX
 SHAPE_CAT = [_CAT.get(_i, CUBE) for _i in range(_MAXID)]
 
 # mutual same-type face culling (glass/leaves/ice/water/lava/slab): a face
 # between two blocks in the same group is skipped (Block.shouldSideBeRendered
 # overrides). group 0 = none.
 _GRP = {20: 1, 18: 2, 79: 3, 8: 4, 9: 4, 10: 5, 11: 5, 44: 6, 43: 6}
+for _i in (95, 102, 160): _GRP[_i] = 1        # stained/plain glass + panes cull like glass
+_GRP[161] = 2                                 # acacia leaves cull like leaves
 CULL_GROUP = [_GRP.get(_i, 0) for _i in range(_MAXID)]
 
 # static AABB boxes for BOX blocks (metadata-independent ones). Each is a list
@@ -212,11 +313,19 @@ STATIC_BOXES = {
     69: [(0.5-0.25, 0, 0.5-3*_S, 0.5+0.25, 3*_S, 0.5+3*_S)],  # lever base (approx)
     93: [(0, 0, 0, 1, 2*_S, 1)],                      # repeater
     94: [(0, 0, 0, 1, 2*_S, 1)],
-    63: [(0.5-2*_S, 0, 0.5-2*_S, 0.5+2*_S, 1, 0.5+2*_S)],  # sign post (approx)
-    68: [(0, 4*_S, 0, 1, 12*_S, 2*_S)],               # wall sign (approx)
+    63: [(0.5-_S, 0, 0.5-_S, 0.5+_S, 9*_S, 0.5+_S),        # standing sign: thin post…
+         (_S, 9*_S, 7*_S, 1-_S, 1, 9*_S)],                # …+ a board panel on top
+    68: [(0, 4.5*_S, 0, 1, 12.5*_S, 2*_S)],           # wall sign: a board panel on the -Z wall
     26: [(0, 0, 0, 1, 9*_S, 1)],                      # bed (approx)
     64: [(0, 0, 0, 3*_S, 1, 1)],                      # door (approx, -X face)
     71: [(0, 0, 0, 3*_S, 1, 1)],
+    126: [(0, 0, 0, 1, 0.5, 1)],                      # wooden slab (bottom half)
+    182: [(0, 0, 0, 1, 0.5, 1)],                      # red sandstone slab
+    205: [(0, 0, 0, 1, 0.5, 1)],                      # purpur slab
+    171: [(0, 0, 0, 1, _S, 1)],                       # carpet (1/16 thin)
+    147: [(_S, 0, _S, 1-_S, _S, 1-_S)],               # light weighted pressure plate
+    148: [(_S, 0, _S, 1-_S, _S, 1-_S)],               # heavy weighted pressure plate
+    167: [(0, 0, 0, 1, 3*_S, 1)],                     # iron trapdoor (closed, floor)
 }
 # torch post box + which metadata leans it to a wall
 TORCH_BOX = (7*_S, 0, 7*_S, 9*_S, 10*_S, 9*_S)
