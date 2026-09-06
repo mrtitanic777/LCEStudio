@@ -1,31 +1,63 @@
 # LCE Studio
 
-A complete editor for **Minecraft: Xbox 360 Edition (Legacy Console Edition, TU0)** save games.
-Read, edit, visualize and write LCE retail saves — inventory, blocks, entities, tile-entities,
-spawn, raw NBT — and write them back **console-exact** so they load without freezing.
+A complete toolkit for **Minecraft: Xbox 360 / Legacy Console Edition (LCE)** save games —
+browse, edit, visualize, convert and write LCE saves, and write them back **console-exact**
+so they load in-game without freezing.
 
-Everything is one self-contained package (`lce/`). Nothing else is required except Python 3
-and (for the map visualizers) Pillow.
+It reads **every LCE chunk format** (old-NBT 128/256-tall, tile-storage v8–v11, and the
+Aquatic sectioned v12), so it opens worlds from **TU0 through TU75**, and it can convert them
+between platforms and title updates and export them to Java.
+
+Everything is one self-contained package (`lce/`). The only runtime dependencies are Python 3
+plus Pillow (2D map/renders) and pyglet + numpy (3D viewer). Windows-only conversion features
+use bundled DLLs.
+
+## Highlights
+
+- **World Library** — a gallery of every world in your saves folders (thumbnail · name ·
+  platform · title update), with search/filter, detail-on-hover (size, seed, dimensions), and
+  Open / Convert / Repair on each card.
+- **Full editor** — inventory (with a slot grid and searchable block/item **name dropdowns**),
+  blocks, entities (searchable mob names), tile-entities, players, spawn, and a raw NBT tree.
+- **Global NBT search** — find any tag, id, item, entity or name across the whole save and jump
+  to each hit.
+- **2D map & inline Isometric view** — top-down / Y-slice maps with markers, plus a whole-world
+  3D isometric view you can pan and zoom, right in the app.
+- **3D fly-through editor** — a real WASD editor: place/break/fill, box-select, a block atlas,
+  and full-structure copy/paste to `.schematic` (with tile-entities).
+- **Cross-platform converter** — Xbox 360 ↔ PS3 ↔ Windows LCE, LCE → Java (Anvil), any-title-
+  update downgrade/retarget, and STFS `.bin` re-signing.
+- **Repair & relight** — fix the orphaned/duplicate tile-entities and broken entities that
+  hard-freeze a save; rebuild lighting.
+- **Generators** — flatten / mountains, pixel-art & 3D-model → schematic, and ready-to-play
+  **challenge worlds** (Skyblock / One-Chunk / Void / Island).
+- **World Timelapse** — a snapshot is captured every time you save; scrub the history as
+  isometric frames and restore any older version (a visual undo across sessions).
 
 ## Run it
 
-**Standalone (no Python needed)** — double-click **`LCEStudio.exe`**. A single portable
-executable with everything bundled (engine, 2D map, 3D viewer, `lzxc.exe`, textures).
-Rebuild it any time with `build_exe.bat` (needs `pyinstaller`).
+**Standalone (no Python needed)** — run **`LCEStudio.exe`**. A single portable executable with
+everything bundled (engine, 2D/3D renderers, converter engine + DLLs, `lzxc.exe`, textures).
+Rebuild it any time with `build_exe.bat` (needs `pyinstaller`), or:
+```
+python -m PyInstaller --noconfirm LCEStudio.spec
+```
 
-**From source** — double-click **`LCEStudio.bat`**, or:
+**From source** — run **`LCEStudio.bat`**, or:
 ```
 python LCEStudio.py "C:\path\to\Save2026 xxx.bin"
 ```
 
-**Command line** — `lce-cli.bat`, or:
+**Command line** — `lce-cli.bat`, or `python -m lce <command>`:
 ```
 python -m lce info    "<save>"
-python -m lce inv     "<save>" --add 264:64        # 64 diamonds
-python -m lce block   "<save>" fill -5 63 -5 5 63 5 20   # glass floor
-python -m lce mob     "<save>" add Giant -84 64 58
-python -m lce nbt     "<save>" level.dat           # dump an NBT tree
-python -m lce analyze "<container.zip|dir>"        # health / recovery
+python -m lce inv     "<save>" --add 264:64            # 64 diamonds
+python -m lce block   "<save>" fill -5 63 -5 5 63 5 20 # glass floor
+python -m lce nbt     "<save>" level.dat               # dump an NBT tree
+python -m lce xjava   "<save>" <out-dir>               # export to Java (Anvil)
+python -m lce towin   "<save>" <out-dir>               # Xbox 360 -> Windows LCE
+python -m lce tocon   "<winlce-save>" <out> --emu      # Windows LCE -> console (emulator folder)
+python -m lce iso     "<save>" out.png                 # isometric world portrait
 ```
 
 **Library**
@@ -42,64 +74,74 @@ w.save(backup=True)          # console-exact, .bak backup, round-trip verified
 
 | Tab | What it does |
 |---|---|
+| **Library** | gallery of all worlds in your saves folders — thumbnail, name, platform, TU; search; hover for detail; Open / Convert / Repair |
 | **Overview** | spawn (editable), player, health, regions, VFS file list |
-| **Map** | top-down world map + horizontal Y-slice; spawn/player/entity markers; 54×54 world boundary frame; chunk grid; fit-to-window; click to inspect, double-click to edit a block |
-| **Inventory** | item table + a Minecraft-style slot grid; add / remove / clear |
-| **Blocks** | get / set / fill any block |
-| **Entities** | list per chunk, add any mob (Giant included) |
-| **NBT** | browse the full tag tree of any file in the save |
-| **Tools** | one-click: give spawner blocks, inject a Giant, build a Giant den, Locked Chest, TNT |
+| **Map** | top-down / Y-slice / **isometric** views; spawn/player/entity markers; world boundary + chunk grid; click to inspect, double-click to edit; 🔍 find structures, 📐 3D portrait, 🎞 timelapse |
+| **Inventory** | item table + a Minecraft-style slot grid, searchable item name dropdown; player stats |
+| **Blocks** | get / set / fill any block, with a searchable block name dropdown |
+| **Entities** | list per chunk or the whole world; add any mob (searchable names) |
+| **NBT** | **search the whole save** for anything, then browse the full tag tree of a file |
+| **Tools** | flatten / mountains, pixel-art & 3D-model → schematic, **challenge worlds**, one-click content, 3D viewer, world atlas |
+| **Convert** | Xbox 360 ↔ PS3 ↔ Windows LCE, → Java, change title update, re-sign a CON, repair / relight |
 
-Every save writes chunks with the mandatory 5-byte segment trailer (or the console freezes
-at "Loading spawn area"), backs up the original as `.bak`, and round-trip-verifies first.
+Every save writes chunks with the mandatory 5-byte segment trailer (or the console freezes at
+"Loading spawn area"), backs the original up as `.bak`, and round-trip-verifies first.
+
+## 3D world editor
+
+Tools tab → **Open in 3D fly-through viewer**, or `python -m lce.view3d "<save>"`. A real editor
+meshed per-chunk through the same engine, so edits re-mesh instantly:
+
+| | |
+|---|---|
+| **Move / look** | WASD, Space/Ctrl up-down, mouse look (Esc releases), Shift = faster |
+| **Place / Break** | left-click places the selected block; right-click removes the aimed one |
+| **Fill / Remove box** | left-drag fills a box; right-drag deletes one (a measuring stick shows N×M×K) |
+| **Select a structure** | **J** magic-wands a whole build (bounded by a **K** box to isolate it) |
+| **Copy / paste / schematic** | Ctrl+C/V, and Ctrl+E/I export/import `.schematic` (chests & signs travel too) |
+| **Block atlas** | **E** opens the palette; **1–9** = hotbar |
+| **Export** | **Ctrl+S** writes a console-exact save (.bak backup) |
 
 ## Package layout
 
 ```
 lce/
-  codec.py    LZX / RLE / region / container codec  (the proven low-level engine)
-  recover.py  format detection, health checks, zip/container recovery
-  stfs.py     STFS package reading (tutorial / pre-release builds)
-  nbt.py      full NBT read/write engine
-  inject.py   console-exact chunk encode (5-byte trailer) + NBT builders
-  world.py    high-level editable World / Region / Chunk model
-  viz.py      2D map / slice renderers (Pillow)
-  gui.py      the tkinter desktop application
-  cli.py      command line
-  view3d/     native 3D fly-through viewer (pyglet + OpenGL, textured mesher)
-  lzxc.exe    XexTool-RE LZX encoder (console-exact compression)
+  world.py       high-level editable World / Region / Chunk model
+  codec.py       LZX / RLE / region / container codec (the proven low-level engine)
+  inject.py      console-exact chunk encode (5-byte trailer) + NBT builders
+  nbt.py         full NBT read/write engine
+  names.py       block/item name tables (searchable dropdowns)
+  nbtsearch.py   whole-save search index
+  recover.py     format detection, health checks, container recovery
+  stfs.py        STFS package reading / reassignment
+  library.py     World Library scan
+  timelapse.py   save-history snapshots + restore
+  worldgen.py    flatten / mountains / challenge worlds
+  schematic.py   full-structure copy/paste to .schematic (+ tile-entities)
+  convert.py     Java <-> LCE (LCE Studio's own converter)
+  converter/     vendored cross-platform converter engine (Xbox360/PS3/WinLCE/Java, any TU) + DLLs
+  atlas.py viz.py iso.py poi.py analytics.py   maps, isometric render, structure finder, reports
+  gui.py cli.py  desktop app + command line
+  view3d/        native 3D fly-through viewer (pyglet + OpenGL)
+  lzxc.exe       LZX encoder (console-exact compression)
 ```
 
-## 3D world editor
+See `LCE_MODDING_GUIDE.md` for the save-format and patching deep-dive.
 
-Tools tab → **Open in 3D fly-through viewer**, or from the command line:
-```
-python -m lce.view3d "<save>" [--radius 12] [--shot out.png]
-```
-A real editor, not just a viewer — meshed per-chunk through the same engine so edits
-re-mesh instantly:
+## Credits
 
-| | |
-|---|---|
-| **Move / look** | WASD, Space/Ctrl up-down, mouse look (click to capture, Esc releases), Shift = faster |
-| **Place** | Left-click — put the selected block on the face you're aiming at |
-| **Fill box** | Left-drag — hold, re-aim, release: fills the box with the block |
-| **Break** | Right-click — remove the aimed block |
-| **Remove box** | Right-drag — the *measuring stick*: a box shows N×M×K, released → deleted |
-| **Block atlas** | **E** — open the palette, click a block to select; **1–9** = hotbar |
-| **Export** | **Ctrl+S** — write console-exact save (.bak backup) to load in-game |
-| **Quit** | Q or close |
+- The vendored cross-platform **converter engine** (`lce/converter/`) is built on
+  [dtentiion/LCE-Save-Converter](https://github.com/dtentiion/LCE-Save-Converter); credit to its
+  authors. Its id tables are Minecraft's own numbering (data only), and its STFS console-signing
+  constants derive from the Horizon project.
+- Bundled binaries — `xcompress64.dll` (Microsoft XCompress / LZX), `chm_lzx.dll` (CHMLib),
+  `LZXDecompression.dll` (LDI), and `lzxc.exe` — are the property of their respective owners and
+  are included for interoperability only.
 
-Needs `pyglet` and `numpy`.
+## License
 
-Dependencies: Python 3, `Pillow` (2D map), `pyglet` + `numpy` (3D view). See `requirements.txt`.
+LCE Studio's own source code is released under the **MIT License** — see [LICENSE](LICENSE).
+The third-party components listed above retain their own licenses/terms.
 
-## Notes
-
-- LCE TU0 finite worlds pre-generate only a **25×25-chunk spawn square**; the rest of the
-  **54×54 boundary** streams in as you explore. The Map tab frames your generated area inside
-  the true world square.
-- Giants need the **"Stable Giant (2×)" runtime patch** (Nexia360 `.patch.toml`) to load
-  without crashing — the editor injects the mob; the patch keeps it stable.
-
-See `LCE_MODDING_GUIDE.md` for the format and patching deep-dive.
+*Minecraft is a trademark of Mojang / Microsoft. This is an unofficial, fan-made tool and is not
+affiliated with or endorsed by them.*
