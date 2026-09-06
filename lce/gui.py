@@ -131,6 +131,10 @@ class Studio(tk.Tk):
         st.configure("Muted.TLabel", background=p["BG"], foreground=p["MUTED"])
         st.configure("H1.TLabel", background=p["BG"], foreground=p["INK"], font=("Segoe UI Light", 22))
         st.configure("Value.TLabel", background=p["BG"], foreground=p["INK"], font=("Segoe UI", 11))
+        st.configure("Accent.TLabel", background=p["BG"], foreground=p["ACCENT"],
+                     font=("Segoe UI Semibold", 10))
+        st.configure("Dup.TLabel", background=p["BG"], foreground=p.get("WARN", "#c9601a"),
+                     font=("Segoe UI Semibold", 8))
         st.configure("Bar.TFrame", background=p["BG"])
         st.configure("Card.TLabelframe", padding=12)
         st.configure("TSeparator", background=p["LINE"])
@@ -1727,12 +1731,19 @@ class Studio(tk.Tk):
         se.bind("<KeyRelease>", lambda e: self._lib_apply_filter())
         ttk.Button(sr, text="Clear", style="Card.TButton",
                    command=lambda: (self.lib_query.set(""), self._lib_apply_filter())).pack(side="left")
+        self.lib_dupes_only = tk.BooleanVar(value=False)
+        ttk.Checkbutton(sr, text="duplicates only", variable=self.lib_dupes_only,
+                        command=self._lib_apply_filter).pack(side="left", padx=(14, 0))
         ttk.Label(sr, text="matches name · platform · TU", style="Muted.TLabel").pack(side="left", padx=10)
+        srow = ttk.Frame(outer); srow.pack(fill="x", pady=(0, 6))
         self.lib_status = tk.StringVar(value="")
-        ttk.Label(outer, textvariable=self.lib_status, style="Muted.TLabel").pack(anchor="w", pady=(0, 6))
+        ttk.Label(srow, textvariable=self.lib_status, style="Muted.TLabel").pack(side="left")
+        self.lib_dup_status = tk.StringVar(value="")
+        ttk.Label(srow, textvariable=self.lib_dup_status, style="Accent.TLabel").pack(side="left", padx=(12, 0))
         self.lib_grid = self._vscroll(outer)
         self._lib_photos = []
         self._lib_worlds = []; self._lib_imgs = []
+        self._lib_dupgroups = 0; self._lib_enrich_gen = 0
         self._lib_tip = None; self._lib_tip_label = None; self._lib_hover_w = None
         self._lib_show_job = None; self._lib_hide_job = None
         self._lib_detail_cache = {}; self._lib_detail_pending = set()
@@ -1783,12 +1794,56 @@ class Studio(tk.Tk):
         self._lib_busy = False
         self._lib_worlds = worlds
         self._lib_imgs = imgs
+        self._lib_dupgroups = 0
+        self.lib_dup_status.set("")
         self._lib_apply_filter()
+        self._lib_enrich_start()                     # accurate TU + duplicate scan in the background
+
+    def _lib_enrich_start(self):
+        """Background pass that reads each world's payload once to set an accurate,
+        content-based title update and find byte-identical duplicate saves. Doesn't set
+        the global busy flag, so the gallery stays fully usable while it runs."""
+        worlds = self._lib_worlds
+        if not worlds:
+            return
+        self._lib_enrich_gen += 1
+        gen = self._lib_enrich_gen
+        self.lib_dup_status.set("checking title updates & duplicates…")
+
+        def worker():
+            from . import library as L
+            n = len(worlds)
+
+            def on_world(i, _w):
+                if i % 15 == 0 or i == n - 1:
+                    self._post(lambda i=i: (gen == self._lib_enrich_gen and
+                               self.lib_dup_status.set("checking… %d/%d" % (i + 1, n))))
+            try:
+                groups = L.enrich(worlds, on_world=on_world)
+            except Exception:
+                groups = []
+            self._post(lambda: self._lib_enrich_done(gen, groups))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _lib_enrich_done(self, gen, groups):
+        if gen != self._lib_enrich_gen:              # a rescan superseded this pass
+            return
+        self._lib_dupgroups = len(groups)
+        ndup = sum(len(g) for g in groups)
+        if groups:
+            self.lib_dup_status.set("⧉ %d duplicate set%s (%d saves) — tick “duplicates only” to review"
+                                    % (len(groups), "" if len(groups) == 1 else "s", ndup))
+        else:
+            self.lib_dup_status.set("no duplicate saves found")
+        self._lib_detail_cache.clear()               # detail text now includes accurate TU / dup info
+        self._lib_apply_filter()                     # re-render with refined TU chips + dup badges
 
     def _lib_apply_filter(self):
         from . import library as L
         q = (self.lib_query.get().strip().lower() if hasattr(self, "lib_query") else "")
         pairs = list(zip(self._lib_worlds, self._lib_imgs))
+        if getattr(self, "lib_dupes_only", None) and self.lib_dupes_only.get():
+            pairs = [(w, im) for (w, im) in pairs if w.get("dup_paths")]
         if q:
             toks = q.split()
 
@@ -1809,10 +1864,14 @@ class Studio(tk.Tk):
                       style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
             self.lib_status.set("0 worlds")
             return
-        self.lib_status.set(("showing %d of %d worlds" % (len(pairs), total)) if q
+        filtered = len(pairs) != total
+        self.lib_status.set(("showing %d of %d worlds" % (len(pairs), total)) if filtered
                             else "%d worlds" % total)
         if not pairs:
-            ttk.Label(self.lib_grid, text="No worlds match “%s”." % q,
+            dupes_only = getattr(self, "lib_dupes_only", None) and self.lib_dupes_only.get()
+            msg = ("No duplicate saves found." if dupes_only and not q
+                   else "No worlds match “%s”." % q if q else "No worlds to show.")
+            ttk.Label(self.lib_grid, text=msg,
                       style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
             return
         cols = 4
@@ -1835,6 +1894,10 @@ class Studio(tk.Tk):
                   justify="left").pack(anchor="w", pady=(6, 0))
         meta = "%s · %s" % (L.PLATFORM_LABEL.get(w["platform"], w["platform"]), w["tu"] or "TU ?")
         ttk.Label(card, text=meta, style="Muted.TLabel").pack(anchor="w")
+        ndup = len(w.get("dup_paths") or [])
+        if ndup:
+            ttk.Label(card, text="⧉ duplicate  (%d other cop%s)" % (ndup, "y" if ndup == 1 else "ies"),
+                      style="Dup.TLabel").pack(anchor="w")
         bar = ttk.Frame(card); bar.pack(anchor="w", pady=(5, 0))
         ttk.Button(bar, text="Open", style="Card.TButton",
                    command=lambda ww=w: self._lib_open(ww)).pack(side="left")
@@ -1902,6 +1965,21 @@ class Studio(tk.Tk):
         from . import library as L
         head = "%s\n%s  ·  %s" % (w["name"], L.PLATFORM_LABEL.get(w["platform"], w["platform"]),
                                   w.get("tu") or "TU ?")
+        dups = w.get("dup_paths") or []
+        if dups:
+            import os as _os
+
+            def _label(p):
+                p = str(p).rstrip("/\\")
+                base = _os.path.basename(p)
+                # generic container files -> show the folder that identifies the world
+                if base.lower() in ("savegame.dat", "gamedata", "savedata.ms"):
+                    return _os.path.basename(_os.path.dirname(p)) or base
+                return base
+
+            shown = "\n".join("   • " + _label(p) for p in dups[:4])
+            more = "" if len(dups) <= 4 else "\n   • …and %d more" % (len(dups) - 4)
+            head += "\n⧉ duplicate of:\n%s%s" % (shown, more)
         if detail is None:
             return head + "\n\nReading world…"
         if detail == "FAILED":
