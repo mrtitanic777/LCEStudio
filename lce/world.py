@@ -204,6 +204,7 @@ class Region:
         self.chunks = {}                       # (lcx,lcz) -> Chunk (old-NBT), decoded lazily
         self.aquatic_raw = {}                  # (lcx,lcz) -> raw format-12 chunk bytes
         self.aquatic_edits = {}                # (lcx,lcz) -> {(lx,y,lz): (id, meta)}
+        self._aquatic_dec = {}                 # (lcx,lcz) -> decoded id grid np[16,256,16] (X,Y,Z) or False
         self.dirty = set()
         self._offsets = self._index()          # (lcx,lcz) -> byte offset of its sector
         self._decoded = set()                  # coords already decode-attempted
@@ -277,6 +278,27 @@ class Region:
     def edit_aquatic(self, lcx, lcz, lx, y, lz, bid, meta):
         """Record a block edit against a raw format-12 chunk (applied at rebuild)."""
         self.aquatic_edits.setdefault((lcx, lcz), {})[(lx, y, lz)] = (bid & 0xFF, meta & 0xF)
+
+    def aquatic_block(self, lcx, lcz, lx, y, lz):
+        """Read a block id from a raw format-12 (Aquatic) chunk, honouring any pending
+        edit. Decodes the chunk's id grid once and caches it. Returns None if there's no
+        aquatic chunk here or y is out of range."""
+        if not (0 <= y < 256) or not self.has_aquatic(lcx, lcz):
+            return None
+        e = self.aquatic_edits.get((lcx, lcz))
+        if e is not None and (lx & 15, y, lz & 15) in e:
+            return e[(lx & 15, y, lz & 15)][0]
+        grid = self._aquatic_dec.get((lcx, lcz))
+        if grid is None:
+            from . import format12
+            try:
+                grid = format12.decode_chunk(self.aquatic_raw[(lcx, lcz)])["ids"]
+            except Exception:
+                grid = False
+            self._aquatic_dec[(lcx, lcz)] = grid
+        if grid is False:
+            return None
+        return int(grid[lx & 15, y, lz & 15])
 
     def rebuild(self, on_chunk=None):
         """Return updated region bytes, re-encoding dirty old-NBT chunks AND any
@@ -585,8 +607,16 @@ class World:
         return reg.chunk(wcx - rx * 32, wcz - rz * 32) if reg else None
 
     def get_block(self, x, y, z, nether=False):
-        c = self.chunk(x >> 4, z >> 4, nether)
-        return c.get_block(x, y, z) if c else None
+        wcx, wcz = x >> 4, z >> 4
+        c = self.chunk(wcx, wcz, nether)
+        if c is not None:
+            return c.get_block(x, y, z)
+        # format-12 (Aquatic) chunk -> read from its decoded grid (consistent with set_block)
+        rx, rz = wcx >> 5, wcz >> 5
+        reg = self.region(rx, rz, nether)
+        if reg is not None:
+            return reg.aquatic_block(wcx - rx * 32, wcz - rz * 32, x & 15, y, z & 15)
+        return None
 
     def set_block(self, x, y, z, bid, data=0, nether=False):
         """Set a block. Returns the (wcx,wcz) chunk it edited on success, or None if
