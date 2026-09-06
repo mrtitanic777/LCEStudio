@@ -9,9 +9,7 @@ A complete toolkit for **Minecraft: Xbox 360 / Legacy Console Edition (LCE)** sa
 browse, edit, visualize, convert and write LCE saves, and write them back **console-exact**
 so they load in-game without freezing.
 
-![LCEStudio — the World Library gallery](docs/screenshot-library.png)
-
-*The World Library — every world in your saves folders, with thumbnails, search and detail-on-hover, ready to open, convert or repair.*
+![LCEStudio](docs/screenshot-welcome.png)
 
 It reads **every LCE chunk format** (old-NBT 128/256-tall, tile-storage v8–v11, and the
 Aquatic sectioned v12), so it opens worlds from **TU0 through TU75**, and it can convert them
@@ -46,6 +44,10 @@ use bundled DLLs.
 ## Screenshots
 
 <table>
+  <tr>
+    <td width="50%"><img src="docs/screenshot-library.png" alt="World Library"><br><b>World Library</b> — every world in your saves folders: thumbnail, platform, title update; search and detail-on-hover.</td>
+    <td width="50%"><img src="docs/screenshot-waypoints.png" alt="Waypoints & teleport"><br><b>Waypoints & teleport</b> — named pins on the map; teleport players with a safe surface-snap.</td>
+  </tr>
   <tr>
     <td width="50%"><img src="docs/screenshot-convert.png" alt="Convert tab"><br><b>Cross-platform converter</b> — Xbox 360 ↔ PS3 ↔ Windows LCE, export to Java, change title update, re-sign a CON.</td>
     <td width="50%"><img src="docs/screenshot-nbt.png" alt="Global NBT search"><br><b>Global NBT search</b> — find any item, entity, sign or tag across the whole save and open its tree.</td>
