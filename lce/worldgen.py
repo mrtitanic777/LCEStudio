@@ -138,7 +138,7 @@ import re as _re
 from . import nbt as _N
 
 # a modest survival starter kit (TU0 numeric item ids)
-_STARTER = [(6, 4, 0), (295, 8, 0), (338, 2, 0), (338, 0x2, 0), (352, 3, 0)]
+_STARTER = [(6, 4, 0), (295, 8, 0), (338, 2, 0), (50, 16, 0), (352, 3, 0)]   # saplings/seeds/cane/torches/bone
 # classic Skyblock chest
 _SKYBLOCK_CHEST = [
     (327, 1, 0),   # lava bucket
@@ -222,6 +222,12 @@ def generate_challenge(world, kind="skyblock", log=print):
     kind = kind.lower().replace(" ", "-")
     if kind not in CHALLENGES:
         raise ValueError("unknown challenge %r (use: %s)" % (kind, ", ".join(CHALLENGES)))
+    # every challenge is anchored at chunk (0,0). If that chunk isn't in the save,
+    # fill()/set_block() silently no-op and we'd hand back an empty void world while
+    # still teleporting players into it — so probe it and fail loudly instead.
+    if world.set_block(0, 64, 0, world.get_block(0, 64, 0) or 0) is None:
+        raise ValueError("this world has no generated chunk at spawn (0,0) to build on — "
+                         "open a normal world whose spawn region exists.")
     ext = _extent(world)
     if ext:
         log("clearing world to the void…")
