@@ -4418,10 +4418,12 @@ def retarget_payload(payload: bytes, target_tu: int, endian: str = '>',
             new_body = _recompress_chunk(fixed, bool(craw & CHUNK_FLAG_RLE),
                                          endian, verify)
             if new_body is None or len(new_body) > clen:
-                # Never grow a chunk in place - that would need the whole
-                # region repacking, and a relabel should not cost bytes.
-                if new_body is None:
-                    continue
+                # Never grow a chunk in place - writing a body larger than its
+                # allocated span would overwrite the FOLLOWING chunk's sectors and
+                # corrupt the region. Leave this one chunk byte-identical (it keeps
+                # its source version word); a relabel must not cost bytes. This is
+                # extremely rare since only 2 bytes changed before recompression.
+                continue
             out[fo + 8: fo + 8 + len(new_body)] = new_body
             struct.pack_into(endian + 'I', out, fo,
                              (craw & ~CHUNK_LEN_MASK) | len(new_body))
