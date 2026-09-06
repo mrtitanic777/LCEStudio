@@ -1379,10 +1379,20 @@ class Studio(tk.Tk):
         self.lib_folders_lbl = tk.StringVar()
         ttk.Label(outer, textvariable=self.lib_folders_lbl, style="Muted.TLabel",
                   wraplength=920, justify="left").pack(anchor="w", pady=(2, 6))
+        sr = ttk.Frame(outer); sr.pack(fill="x", pady=(0, 4))
+        ttk.Label(sr, text="Search", style="Muted.TLabel").pack(side="left")
+        self.lib_query = tk.StringVar()
+        se = ttk.Entry(sr, textvariable=self.lib_query, width=32)
+        se.pack(side="left", padx=(8, 6))
+        se.bind("<KeyRelease>", lambda e: self._lib_apply_filter())
+        ttk.Button(sr, text="Clear", style="Card.TButton",
+                   command=lambda: (self.lib_query.set(""), self._lib_apply_filter())).pack(side="left")
+        ttk.Label(sr, text="matches name · platform · TU", style="Muted.TLabel").pack(side="left", padx=10)
         self.lib_status = tk.StringVar(value="")
         ttk.Label(outer, textvariable=self.lib_status, style="Muted.TLabel").pack(anchor="w", pady=(0, 6))
         self.lib_grid = self._vscroll(outer)
         self._lib_photos = []
+        self._lib_worlds = []; self._lib_imgs = []
         self._refresh_folders_label()
 
     def _refresh_folders_label(self):
@@ -1428,18 +1438,41 @@ class Studio(tk.Tk):
 
     def _lib_done(self, worlds, imgs):
         self._lib_busy = False
+        self._lib_worlds = worlds
+        self._lib_imgs = imgs
+        self._lib_apply_filter()
+
+    def _lib_apply_filter(self):
         from . import library as L
+        q = (self.lib_query.get().strip().lower() if hasattr(self, "lib_query") else "")
+        pairs = list(zip(self._lib_worlds, self._lib_imgs))
+        if q:
+            toks = q.split()
+
+            def hay(w):
+                return ("%s %s %s" % (w["name"], L.PLATFORM_LABEL.get(w["platform"], w["platform"]),
+                                      w.get("tu") or "")).lower()
+            pairs = [(w, im) for (w, im) in pairs if all(t in hay(w) for t in toks)]
+        self._lib_render(pairs, q)
+
+    def _lib_render(self, pairs, q=""):
         for ch in self.lib_grid.winfo_children():
             ch.destroy()
         self._lib_photos = []
-        if not worlds:
+        total = len(self._lib_worlds)
+        if not total:
             ttk.Label(self.lib_grid, text="No worlds found in the configured folders.",
                       style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
             self.lib_status.set("0 worlds")
             return
-        self.lib_status.set("%d worlds" % len(worlds))
+        self.lib_status.set(("showing %d of %d worlds" % (len(pairs), total)) if q
+                            else "%d worlds" % total)
+        if not pairs:
+            ttk.Label(self.lib_grid, text="No worlds match “%s”." % q,
+                      style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
+            return
         cols = 4
-        for i, (w, im) in enumerate(zip(worlds, imgs)):
+        for i, (w, im) in enumerate(pairs):
             self._lib_card(self.lib_grid, w, im).grid(
                 row=i // cols, column=i % cols, padx=8, pady=8, sticky="n")
 
