@@ -288,6 +288,9 @@ for _i in (26, 44, 53, 60, 63, 64, 67, 68, 69, 70, 71, 72, 77, 78,
 # TU-era single slabs / carpet / thin blocks -> BOX (half/thin shapes below);
 # the DOUBLE slabs (125,181,204) stay full CUBEs.
 for _i in (126, 182, 205, 171, 147, 148, 167): _CAT[_i] = BOX
+# ALL stairs (Beta + TU-era) -> BOX, oriented by metadata via stairs_boxes
+STAIR_IDS = (53, 67, 108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180, 203)
+for _i in STAIR_IDS: _CAT[_i] = BOX
 SHAPE_CAT = [_CAT.get(_i, CUBE) for _i in range(_MAXID)]
 
 # mutual same-type face culling (glass/leaves/ice/water/lava/slab): a face
@@ -414,6 +417,73 @@ def stairs_boxes(meta):
     if m == 1:   return [(0, 0, 0, 0.5, 1, 1), (0.5, 0, 0, 1, 0.5, 1)]
     if m == 2:   return [(0, 0, 0, 1, 0.5, 0.5), (0, 0, 0.5, 1, 1, 1)]
     return [(0, 0, 0, 1, 1, 0.5), (0, 0, 0.5, 1, 0.5, 1)]
+
+
+# ---- metadata-driven ORIENTED boxes (wall signs, standing signs, trapdoors, doors) --
+# LCE stores the same block metadata as Java pre-1.13, so these follow the classic
+# RenderBlocks encodings. north=-Z, south=+Z, west=-X, east=+X.
+def wall_sign_boxes(meta):
+    """Thin board hung flush on the wall the sign faces (meta 2/3/4/5 = N/S/W/E)."""
+    y0, y1, th = 4.5 * _S, 12.5 * _S, 2 * _S
+    m = meta & 7
+    if m == 2:   return [(0, y0, 0, 1, y1, th)]           # facing north  -> board on -Z
+    if m == 3:   return [(0, y0, 1 - th, 1, y1, 1)]       # facing south  -> board on +Z
+    if m == 4:   return [(0, y0, 0, th, y1, 1)]           # facing west   -> board on -X
+    if m == 5:   return [(1 - th, y0, 0, 1, y1, 1)]       # facing east   -> board on +X
+    return [(0, y0, 0, 1, y1, th)]
+
+
+def sign_post_boxes(meta):
+    """A standing sign: centre post + a board panel perpendicular to its facing.
+    16 rotations snapped to the nearest cardinal (text itself is a billboard label)."""
+    post = (0.5 - _S, 0, 0.5 - _S, 0.5 + _S, 9 * _S, 0.5 + _S)
+    d = int(round((meta & 15) / 4.0)) & 3                 # 0=S(+Z) 1=W(-X) 2=N(-Z) 3=E(+X)
+    y0, y1 = 8 * _S, 15 * _S
+    if d in (0, 2):                                       # facing ±Z -> board spans X, thin in Z
+        board = (_S, y0, 7 * _S, 1 - _S, y1, 9 * _S)
+    else:                                                 # facing ±X -> board spans Z, thin in X
+        board = (7 * _S, y0, _S, 9 * _S, y1, 1 - _S)
+    return [post, board]
+
+
+def trapdoor_boxes(meta):
+    """Trapdoor: closed -> horizontal 3/16 slab at bottom or top (0x8); open -> a
+    vertical 3/16 panel against the hinge wall (0x3 = S/N/E/W)."""
+    th = 3 * _S
+    if meta & 4:                                          # open -> vertical on the hinge wall
+        side = meta & 3
+        if side == 0:   return [(0, 0, 1 - th, 1, 1, 1)]  # south (+Z)
+        if side == 1:   return [(0, 0, 0, 1, 1, th)]      # north (-Z)
+        if side == 2:   return [(1 - th, 0, 0, 1, 1, 1)]  # east  (+X)
+        return [(0, 0, 0, th, 1, 1)]                      # west  (-X)
+    if meta & 8:        return [(0, 1 - th, 0, 1, 1, 1)]  # closed, top half
+    return [(0, 0, 0, 1, th, 1)]                          # closed, bottom half
+
+
+def door_boxes(meta, meta_below=0):
+    """A door half as a 3/16 panel on one edge. Facing comes from the LOWER half's
+    metadata (`meta` for the lower voxel, `meta_below` for the upper voxel, which only
+    stores the hinge bit). open (0x4) swings the panel to the adjacent edge."""
+    low = meta if not (meta & 8) else meta_below          # facing lives on the lower half
+    f = low & 3
+    open_ = bool(low & 4)
+    th = 3 * _S
+    #     facing f -> closed edge;  when open, rotate to the next edge clockwise
+    edge = (f + (1 if open_ else 0)) & 3
+    if edge == 0:   return [(0, 0, 0, th, 1, 1)]          # -X
+    if edge == 1:   return [(0, 0, 0, 1, 1, th)]          # -Z
+    if edge == 2:   return [(1 - th, 0, 0, 1, 1, 1)]      # +X
+    return [(0, 0, 1 - th, 1, 1, 1)]                      # +Z
+
+
+def is_solid(block_id):
+    return SOLID[block_id]
+
+def color(block_id):
+    return COLORS[block_id]
+
+def name(block_id):
+    return NAMES[block_id]
 
 
 def is_solid(block_id):

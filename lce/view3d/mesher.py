@@ -17,6 +17,7 @@ _TILES = np.array(blocks.TILES, dtype=np.int32)
 _TILE_LUT = np.array(blocks.TILE_LUT, dtype=np.int32)   # [id, meta, kind] -> tile
 _TINT = np.array(blocks.TINT, dtype=np.float32)
 _CUBE, _BOX, _CROSS, _CROPS, _TORCH, _LADDER, _RAIL = range(7)
+_STAIR_IDS = set(blocks.STAIR_IDS)
 
 _ATLAS = 16
 _TSZE = 1.0 / _ATLAS
@@ -257,8 +258,17 @@ def build_chunk_mesh(world, cx, cz):
     for x, z, y in zip(bxs.tolist(), bzs.tolist(), bys.tolist()):
         bid = int(here[x, z, y])
         m = int(meta[x, z, y]) if meta is not None else 0
-        if bid in (53, 67):
-            boxlist = blocks.stairs_boxes(m)
+        if bid in _STAIR_IDS:
+            boxlist = blocks.stairs_boxes(m)                  # oriented by metadata
+        elif bid == 68:                                       # wall sign -> flush on its wall
+            boxlist = blocks.wall_sign_boxes(m)
+        elif bid == 63:                                       # standing sign -> post + board
+            boxlist = blocks.sign_post_boxes(m)
+        elif bid in (96, 167):                                # trap doors -> by facing/open
+            boxlist = blocks.trapdoor_boxes(m)
+        elif bid in (64, 71):                                 # doors -> by facing (from lower half)
+            mb = int(meta[x, z, y - 1]) if (meta is not None and y > 0) else 0
+            boxlist = blocks.door_boxes(m, mb)
         elif bid == 85:                                       # fence: post + rails
             boxlist = [(6/16, 0, 6/16, 10/16, 1, 10/16)]
             xm = pad[x, 1+z, 1+y] == 85; xp = pad[2+x, 1+z, 1+y] == 85

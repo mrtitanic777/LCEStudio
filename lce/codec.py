@@ -678,8 +678,15 @@ def build_legacy_chunk_nbt(c, full_height=False):
 
 def decode_region(path, full_height=False):
     """Yield (chunk_x, chunk_z, nbt_bytes) for every present chunk in a .mcr.
-    full_height=True keeps compressed chunks' upper 128 (for the 256-tall viewer)."""
+    full_height=True keeps compressed chunks' upper 128 (for the 256-tall viewer).
+
+    Robust: an empty / truncated region file (a legitimately ungenerated region — many
+    TU-era worlds ship allocated-but-empty .mcr entries), a location pointing past the
+    end of the file, or a single corrupt chunk are all skipped rather than raising, so
+    one bad region can never abort loading a whole world."""
     d = open(path, "rb").read()
+    if len(d) < 4096:                          # no 4 KB location table -> no chunks
+        return
     for i in range(1024):
         loc = struct.unpack_from(">I", d, i * 4)[0]
         sector = loc >> 8
@@ -687,8 +694,14 @@ def decode_region(path, full_height=False):
             continue
         cx, cz = i % 32, i // 32
         p = sector * 4096
-        nbt, _ = decode_region_chunk(d[p:], full_height=full_height)
-        yield cx, cz, nbt
+        if p + 4 > len(d):                     # location points past the file
+            continue
+        try:
+            nbt, _ = decode_region_chunk(d[p:], full_height=full_height)
+        except Exception:
+            continue                           # a corrupt chunk shouldn't kill the region
+        if nbt:
+            yield cx, cz, nbt
 
 # ---- ENCODE (write LCE saves) ----------------------------------------------
 # LZX is emitted using uncompressed blocks only: a fully valid, decoder-
