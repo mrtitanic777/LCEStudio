@@ -369,7 +369,7 @@ class Studio(tk.Tk):
         self._build_library(); self._build_overview(); self._build_map(); self._build_inv()
         self._build_players(); self._build_blocks(); self._build_ent(); self._build_nbt()
         self._build_tools(); self._build_convert(); self._build_io()
-        self._select_tab(self.tab_library)              # the gallery is the front-door
+        self._select_tab(self.tab_overview)             # branded welcome (with byline) opens first
         self.after(400, self._lib_scan)                 # populate the Library shortly after launch
 
     # ---------------------------------------------------------------- Overview
@@ -382,6 +382,8 @@ class Studio(tk.Tk):
         wc = ttk.Frame(self.ov_welcome)
         wc.place(relx=0.5, rely=0.44, anchor="center")
         ttk.Label(wc, text="Welcome to LCEStudio", style="H1.TLabel", anchor="center").pack()
+        ttk.Label(wc, text="Built by Logan Greer & Hijack Assassain", style="Muted.TLabel",
+                  anchor="center").pack(pady=(2, 0))
         ttk.Label(wc, style="Muted.TLabel", anchor="center", justify="center",
                   text="Edit and convert Minecraft: Xbox 360 (Legacy Console) worlds.").pack(
             pady=(8, 26))
