@@ -1,4 +1,4 @@
-# LCE Studio
+# LCEStudio
 
 [![Latest release](https://img.shields.io/github/v/release/mrtitanic777/LCEStudio?sort=semver&label=release)](https://github.com/mrtitanic777/LCEStudio/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/mrtitanic777/LCEStudio/total)](https://github.com/mrtitanic777/LCEStudio/releases)
@@ -9,7 +9,7 @@ A complete toolkit for **Minecraft: Xbox 360 / Legacy Console Edition (LCE)** sa
 browse, edit, visualize, convert and write LCE saves, and write them back **console-exact**
 so they load in-game without freezing.
 
-![LCE Studio — the World Library gallery](docs/screenshot-library.png)
+![LCEStudio — the World Library gallery](docs/screenshot-library.png)
 
 *The World Library — every world in your saves folders, with thumbnails, search and detail-on-hover, ready to open, convert or repair.*
 
@@ -142,7 +142,7 @@ lce/
   timelapse.py   save-history snapshots + restore
   worldgen.py    flatten / mountains / challenge worlds
   schematic.py   full-structure copy/paste to .schematic (+ tile-entities)
-  convert.py     Java <-> LCE (LCE Studio's own converter)
+  convert.py     Java <-> LCE (LCEStudio's own converter)
   converter/     vendored cross-platform converter engine (Xbox360/PS3/WinLCE/Java, any TU) + DLLs
   atlas.py viz.py iso.py poi.py analytics.py   maps, isometric render, structure finder, reports
   gui.py cli.py  desktop app + command line
@@ -164,7 +164,7 @@ See `LCE_MODDING_GUIDE.md` for the save-format and patching deep-dive.
 
 ## License
 
-LCE Studio's own source code is released under the **MIT License** — see [LICENSE](LICENSE).
+LCEStudio's own source code is released under the **MIT License** — see [LICENSE](LICENSE).
 The third-party components listed above retain their own licenses/terms.
 
 *Minecraft is a trademark of Mojang / Microsoft. This is an unofficial, fan-made tool and is not

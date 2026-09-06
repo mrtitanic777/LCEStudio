@@ -1,4 +1,4 @@
-"""LCE Studio -- one Minecraft: Xbox 360 (Legacy Console Edition) save toolkit.
+"""LCEStudio -- one Minecraft: Xbox 360 (Legacy Console Edition) save toolkit.
 
 Everything in one package:
 

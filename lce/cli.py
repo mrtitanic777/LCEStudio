@@ -1,4 +1,4 @@
-"""Unified command line for LCE Studio.
+"""Unified command line for LCEStudio.
 
     python -m lce info   <save>
     python -m lce inv    <save> [--add ID[:COUNT[:DMG]]] ... [--clear]

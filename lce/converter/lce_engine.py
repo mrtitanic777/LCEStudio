@@ -617,7 +617,7 @@ def read_savegame_dat(dat: bytes) -> bytes:
     # Decode everything after the 12-byte header and let the uncompressed size be the
     # stop condition (the decoder ignores trailing pad). This is robust to the exact
     # length-word convention: a genuine save's length word points just past the stream,
-    # while a save written by LCE Studio's own compressor carries a slightly larger word
+    # while a save written by LCEStudio's own compressor carries a slightly larger word
     # and a longer stream -- slicing by the word would truncate it and crash the decoder.
     return xmem_decompress(dat[12:], uncomp)
 

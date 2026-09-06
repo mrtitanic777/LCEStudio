@@ -1,4 +1,4 @@
-"""Rendering engine for LCE Studio -- top-down world maps, horizontal slices,
+"""Rendering engine for LCEStudio -- top-down world maps, horizontal slices,
 and overlays (spawn/player/entities, the world boundary frame, and a chunk grid).
 Uses Pillow. Coordinates are Minecraft world blocks.
 

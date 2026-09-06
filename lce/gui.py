@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LCE Studio -- desktop GUI for editing Minecraft: Xbox 360 (LCE) saves.
+"""LCEStudio -- desktop GUI for editing Minecraft: Xbox 360 (LCE) saves.
 
 Runs on the `lce` engine. Open a save (a Save*.bin folder or a savegame.dat),
 edit inventory / blocks / entities / raw NBT / spawn, apply one-click tools
@@ -55,7 +55,7 @@ class Studio(tk.Tk):
 
     def __init__(self, initial=None):
         super().__init__()
-        self.title("LCE Studio")
+        self.title("LCEStudio")
         self.geometry("1280x860")
         self.minsize(1000, 660)
         self.world = None
@@ -323,13 +323,13 @@ class Studio(tk.Tk):
         """The Save/Close controls (right of the merged header) appear only when a
         save is open; the window title carries the name."""
         if self.world is None:
-            self.title("LCE Studio")
+            self.title("LCEStudio")
             for w in (self.btn_save, self.btn_close, self.ab_lbl):
                 w.pack_forget()
             self.btn_save.state(["disabled"])
         else:
             nm = os.path.basename(str(self.path).rstrip("/\\")) or str(self.path)
-            self.title("LCE Studio  —  %s" % nm)
+            self.title("LCEStudio  —  %s" % nm)
             self.ab_name.set(nm)
             if not self.btn_save.winfo_ismapped():
                 self.btn_save.pack(side="right", padx=(6, 2))
@@ -381,7 +381,7 @@ class Studio(tk.Tk):
         self.ov_welcome = ttk.Frame(wrap)
         wc = ttk.Frame(self.ov_welcome)
         wc.place(relx=0.5, rely=0.44, anchor="center")
-        ttk.Label(wc, text="Welcome to LCE Studio", style="H1.TLabel", anchor="center").pack()
+        ttk.Label(wc, text="Welcome to LCEStudio", style="H1.TLabel", anchor="center").pack()
         ttk.Label(wc, style="Muted.TLabel", anchor="center", justify="center",
                   text="Edit and convert Minecraft: Xbox 360 (Legacy Console) worlds.").pack(
             pady=(8, 26))
@@ -1938,7 +1938,7 @@ class Studio(tk.Tk):
 
         self._hr(pad).pack(fill="x", pady=16)
 
-        # -- Java -> Xbox 360 (LCE Studio's own converter; the engine can't read Java) --
+        # -- Java -> Xbox 360 (LCEStudio's own converter; the engine can't read Java) --
         ttk.Label(pad, text="Java  \u2192  Xbox 360 (LCE)", style="Value.TLabel").pack(anchor="w")
         ttk.Label(pad, text="Import a Java world (Alpha / McRegion / Anvil) onto a console template.",
                   style="Muted.TLabel").pack(anchor="w", pady=(0, 4))
@@ -2041,7 +2041,7 @@ class Studio(tk.Tk):
         emu = self.xt_emu.get()
 
         def work():
-            if tu == 0:                                   # LCE Studio's comprehensive any-format -> TU0
+            if tu == 0:                                   # LCEStudio's comprehensive any-format -> TU0
                 from . import convert
                 w = World.open(src)
                 convert.downgrade_to_tu0(w, log=self._logcb())

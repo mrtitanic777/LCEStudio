@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LCE Studio -- launcher / single entry point.
+"""LCEStudio -- launcher / single entry point.
 
     LCEStudio.exe                       open the desktop editor
     LCEStudio.exe "<save-path>"         open the editor on a save

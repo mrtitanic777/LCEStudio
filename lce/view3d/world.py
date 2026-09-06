@@ -265,7 +265,7 @@ class World:
         return (cx, cz)
 
     def export(self, out=None, backup=True):
-        """Apply all edits to the real save via LCE Studio's writer (console-exact).
+        """Apply all edits to the real save via LCEStudio's writer (console-exact).
         Bulk apply (grouped by chunk, numpy-scattered) so a big delete saves in seconds
         instead of replaying millions of blocks one at a time."""
         from .. import World as _LW
