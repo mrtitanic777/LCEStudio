@@ -124,6 +124,8 @@ class Studio(tk.Tk):
                      font=("Segoe UI Semibold", 10), padding=(16, 7), borderwidth=0)
         st.map("Accent.TButton", background=[("active", p["ACCENT_HI"]), ("disabled", p["DISABLED"])])
         st.configure("Ghost.TButton", padding=(14, 7))
+        st.configure("Card.TButton", padding=(7, 3), font=("Segoe UI", 9))
+        st.map("Card.TButton", background=[("active", p["BTN_HI"])])
         st.configure("Section.TLabel", background=p["BG"], foreground=p["MUTED"],
                      font=("Segoe UI Semibold", 9))
         st.configure("Muted.TLabel", background=p["BG"], foreground=p["MUTED"])
@@ -352,10 +354,10 @@ class Studio(tk.Tk):
         self.nb = ttk.Notebook(self, style="Tabless.TNotebook")
         self.nb.pack(fill="both", expand=True, padx=6, pady=(2, 2))
         self._tabbtns = []
-        specs = [("Overview", "tab_overview"), ("Map", "tab_map"), ("Inventory", "tab_inv"),
-                 ("Players", "tab_players"), ("Blocks", "tab_blocks"), ("Entities", "tab_ent"),
-                 ("NBT", "tab_nbt"), ("Tools", "tab_tools"), ("Convert", "tab_convert"),
-                 ("Import / Export", "tab_recover")]
+        specs = [("Library", "tab_library"), ("Overview", "tab_overview"), ("Map", "tab_map"),
+                 ("Inventory", "tab_inv"), ("Players", "tab_players"), ("Blocks", "tab_blocks"),
+                 ("Entities", "tab_ent"), ("NBT", "tab_nbt"), ("Tools", "tab_tools"),
+                 ("Convert", "tab_convert"), ("Import / Export", "tab_recover")]
         for label, attr in specs:
             fr = ttk.Frame(self.nb)
             self.nb.add(fr, text=label)
@@ -364,10 +366,11 @@ class Studio(tk.Tk):
                            command=lambda f=fr: self._select_tab(f))
             b.pack(side="left")
             self._tabbtns.append((fr, b))
-        self._build_overview(); self._build_map(); self._build_inv(); self._build_players()
-        self._build_blocks(); self._build_ent(); self._build_nbt(); self._build_tools()
-        self._build_convert(); self._build_io()
-        self._select_tab(self.tab_overview)
+        self._build_library(); self._build_overview(); self._build_map(); self._build_inv()
+        self._build_players(); self._build_blocks(); self._build_ent(); self._build_nbt()
+        self._build_tools(); self._build_convert(); self._build_io()
+        self._select_tab(self.tab_library)              # the gallery is the front-door
+        self.after(400, self._lib_scan)                 # populate the Library shortly after launch
 
     # ---------------------------------------------------------------- Overview
     def _build_overview(self):
@@ -1338,6 +1341,158 @@ class Studio(tk.Tk):
 
     # ---------------------------------------------------------------- Import / Export
     # ---------------------------------------------------------------- Convert
+    # ---------------------------------------------------------------- World Library
+    def _lib_cfg_path(self):
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+        d = os.path.join(base, "LCEStudio")
+        try:
+            os.makedirs(d, exist_ok=True)
+        except Exception:
+            pass
+        return os.path.join(d, "library.json")
+
+    def _lib_folders(self):
+        import json
+        try:
+            with open(self._lib_cfg_path(), encoding="utf-8") as f:
+                fld = json.load(f).get("folders", [])
+            if fld:
+                return fld
+        except Exception:
+            pass
+        return [g for g in ("C:/Nexia360/Library",) if os.path.isdir(g)]
+
+    def _lib_save_folders(self, folders):
+        import json
+        try:
+            with open(self._lib_cfg_path(), "w", encoding="utf-8") as f:
+                json.dump({"folders": folders}, f, indent=2)
+        except Exception:
+            pass
+
+    def _build_library(self):
+        outer = ttk.Frame(self.tab_library, padding=(16, 12)); outer.pack(fill="both", expand=True)
+        top = ttk.Frame(outer); top.pack(fill="x")
+        ttk.Label(top, text="WORLD LIBRARY", style="Section.TLabel").pack(side="left")
+        ttk.Button(top, text="Rescan", command=self._lib_scan).pack(side="right")
+        ttk.Button(top, text="Add folder…", command=self._lib_add_folder).pack(side="right", padx=(0, 8))
+        self.lib_folders_lbl = tk.StringVar()
+        ttk.Label(outer, textvariable=self.lib_folders_lbl, style="Muted.TLabel",
+                  wraplength=920, justify="left").pack(anchor="w", pady=(2, 6))
+        self.lib_status = tk.StringVar(value="")
+        ttk.Label(outer, textvariable=self.lib_status, style="Muted.TLabel").pack(anchor="w", pady=(0, 6))
+        self.lib_grid = self._vscroll(outer)
+        self._lib_photos = []
+        self._refresh_folders_label()
+
+    def _refresh_folders_label(self):
+        f = self._lib_folders()
+        self.lib_folders_lbl.set(("Folders:  " + "    ".join(f)) if f else
+                                 "No folders yet — click “Add folder…” to point at your saves "
+                                 "(e.g. C:\\Nexia360\\Library or your emulator/Windows LCE saves).")
+
+    def _lib_add_folder(self):
+        d = filedialog.askdirectory(title="Add a saves folder to the library")
+        if not d:
+            return
+        folders = self._lib_folders()
+        if d not in folders:
+            folders.append(d); self._lib_save_folders(folders); self._refresh_folders_label()
+        self._lib_scan()
+
+    def _lib_scan(self):
+        if getattr(self, "_lib_busy", False):
+            return
+        self._lib_busy = True
+        folders = self._lib_folders()
+        self.lib_status.set("Scanning…")
+
+        def worker():
+            try:
+                from . import library as L
+                worlds = L.scan(folders)[:500]
+                imgs = [None] * len(worlds)
+                if _HAVE_PIL:
+                    from PIL import Image
+                    import io
+                    for i, w in enumerate(worlds):
+                        if w["thumbnail"]:
+                            try:
+                                imgs[i] = Image.open(io.BytesIO(w["thumbnail"])).convert("RGB").resize((80, 80))
+                            except Exception:
+                                imgs[i] = None
+                self._post(lambda: self._lib_done(worlds, imgs))
+            except Exception as e:
+                self._post(lambda e=e: (setattr(self, "_lib_busy", False), self._err(e)))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _lib_done(self, worlds, imgs):
+        self._lib_busy = False
+        from . import library as L
+        for ch in self.lib_grid.winfo_children():
+            ch.destroy()
+        self._lib_photos = []
+        if not worlds:
+            ttk.Label(self.lib_grid, text="No worlds found in the configured folders.",
+                      style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
+            self.lib_status.set("0 worlds")
+            return
+        self.lib_status.set("%d worlds" % len(worlds))
+        cols = 4
+        for i, (w, im) in enumerate(zip(worlds, imgs)):
+            self._lib_card(self.lib_grid, w, im).grid(
+                row=i // cols, column=i % cols, padx=8, pady=8, sticky="n")
+
+    def _lib_card(self, parent, w, im):
+        from . import library as L
+        card = ttk.Frame(parent, padding=8)
+        if im is not None and _HAVE_PIL:
+            ph = ImageTk.PhotoImage(im); self._lib_photos.append(ph)
+            thumb = ttk.Label(card, image=ph); thumb.image = ph
+        else:
+            thumb = tk.Canvas(card, width=80, height=80, highlightthickness=0,
+                              background=self.THEMES[self.theme]["CANVAS"])
+        thumb.pack()
+        thumb.bind("<Button-1>", lambda e, ww=w: self._lib_open(ww))
+        ttk.Label(card, text=w["name"], style="Value.TLabel", wraplength=150,
+                  justify="left").pack(anchor="w", pady=(6, 0))
+        meta = "%s · %s" % (L.PLATFORM_LABEL.get(w["platform"], w["platform"]), w["tu"] or "TU ?")
+        ttk.Label(card, text=meta, style="Muted.TLabel").pack(anchor="w")
+        bar = ttk.Frame(card); bar.pack(anchor="w", pady=(5, 0))
+        ttk.Button(bar, text="Open", style="Card.TButton",
+                   command=lambda ww=w: self._lib_open(ww)).pack(side="left")
+        ttk.Button(bar, text="Convert", style="Card.TButton",
+                   command=lambda ww=w: self._lib_convert(ww)).pack(side="left", padx=3)
+        ttk.Button(bar, text="Repair", style="Card.TButton",
+                   command=lambda ww=w: self._lib_repair(ww)).pack(side="left")
+        return card
+
+    def _lib_open(self, w):
+        from . import library as L
+        if w["platform"] != "xbox360":
+            messagebox.showinfo("Open", "The editor reads Xbox 360 saves. Convert this %s world to "
+                                "Xbox 360 first (opening the Convert tab)." % L.PLATFORM_LABEL.get(w["platform"]))
+            return self._lib_convert(w)
+        p = w["path"]
+        if os.path.basename(p).lower() == "savegame.dat":
+            p = os.path.dirname(p)
+        self.load(p)
+        self._select_tab(self.tab_overview)
+
+    def _lib_convert(self, w):
+        for var in ("xc_src", "xj_src", "xt_src"):
+            if hasattr(self, var):
+                getattr(self, var).set(w["path"])
+        self._select_tab(self.tab_convert)
+
+    def _lib_repair(self, w):
+        from . import library as L
+        if w["platform"] != "xbox360":
+            messagebox.showinfo("Repair", "Repair works on Xbox 360 saves; convert first."); return
+        if hasattr(self, "rp_save"):
+            self.rp_save.set(w["path"])
+        self.on_repair()
+
     _PLATCODE = {"Xbox 360": "xbox360", "PS3": "ps3", "Windows LCE": "windows_lce"}
 
     def _vscroll(self, parent):
@@ -2201,6 +2356,11 @@ class Studio(tk.Tk):
         self.refresh_all()
         self._update_chrome()
         self.status.set("Opened: %s" % path)
+        try:                                          # opened from the gallery -> show the editor
+            if self.nb.select() == str(self.tab_library):
+                self._select_tab(self.tab_overview)
+        except Exception:
+            pass
 
     def _world_name(self, w):
         if self._save_meta and self._save_meta.get("name"):
