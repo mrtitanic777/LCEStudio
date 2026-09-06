@@ -516,6 +516,8 @@ class Studio(tk.Tk):
         wrap.rowconfigure(0, weight=1); wrap.columnconfigure(0, weight=1)
         self.map_canvas.bind("<Button-1>", self.on_map_click)
         self.map_canvas.bind("<Double-Button-1>", self.on_map_dblclick)
+        self.map_canvas.bind("<B1-Motion>", self._map_drag)             # iso: drag to pan
+        self.map_canvas.bind("<MouseWheel>", self._map_wheel)           # iso: scroll to zoom
         self.map_canvas.bind("<Configure>", self._on_canvas_resize)
         self._map_photo = None
         self._map_origin = (0, 0)
@@ -527,8 +529,14 @@ class Studio(tk.Tk):
         self.render_map()
 
     def _on_canvas_resize(self, _ev):
-        # debounce; only auto-refit when Fit is on
-        if self.world is None or not self.map_fit.get():
+        if self.world is None:
+            return
+        if getattr(self, "_map_is_iso", False) and getattr(self, "_iso_native", None):
+            if self._resize_job is not None:                # iso: just re-fit, don't re-render
+                self.after_cancel(self._resize_job)
+            self._resize_job = self.after(120, self._iso_redraw)
+            return
+        if not self.map_fit.get():                          # flat modes: auto-refit only when Fit is on
             return
         if self._resize_job is not None:
             self.after_cancel(self._resize_job)
@@ -578,13 +586,7 @@ class Studio(tk.Tk):
             vw = self._map_world(self._map_prog)            # format-complete (all TU formats)
             if mode == "Isometric":                         # whole-world 3D view (no top-down overlay)
                 from . import iso
-                img = iso.render_iso(vw, tile=8)
-                if fit and img.width and img.height:        # scale the render down to the canvas
-                    sc = min(cw / img.width, ch / img.height)
-                    if sc < 0.99:
-                        from PIL import Image
-                        img = img.resize((max(1, int(img.width * sc)), max(1, int(img.height * sc))),
-                                         Image.LANCZOS)
+                img = iso.render_iso(vw, tile=8)            # native render; done() fits + enables zoom
                 return img, None, None, 1.0                 # x0=None marks an iso (view-only) render
             img = atlas.render_slice(vw, ycut) if mode == "Slice" else atlas.render_world(vw)
             x0, z0 = atlas.world_origin(vw)
@@ -596,18 +598,25 @@ class Studio(tk.Tk):
 
         def done(res):
             big, x0, z0, scale = res
+            self._map_is_iso = (x0 is None)
+            if self._map_is_iso:                             # keep the native render for pan/zoom
+                self._iso_native = big; self._iso_zoom = 1.0
+                self._iso_redraw()
+                self.status.set("Isometric view — drag to pan, scroll to zoom.")
+                self._rendering = False
+                if getattr(self, "_render_pending", False):
+                    self._render_pending = False; self.after(10, self.render_map)
+                return
             self._map_photo = ImageTk.PhotoImage(big)
             self._map_origin = (x0, z0); self._map_scale_used = scale
-            self._map_is_iso = (x0 is None)
             ix = max(0, (cw - big.width) // 2); iy = max(0, (ch - big.height) // 2)
             self._map_place = (ix, iy)
             self.map_canvas.delete("all")
             self.map_canvas.create_image(ix, iy, anchor="nw", image=self._map_photo)
             self.map_canvas.configure(scrollregion=(0, 0, max(cw, ix + big.width),
                                                     max(ch, iy + big.height)))
-            if not self._map_is_iso:
-                self._draw_poi_markers()
-            self.status.set("Isometric view rendered." if self._map_is_iso else "Map rendered.")
+            self._draw_poi_markers()
+            self.status.set("Map rendered.")
             self._rendering = False
             if getattr(self, "_render_pending", False):
                 self._render_pending = False
@@ -636,6 +645,40 @@ class Studio(tk.Tk):
             self._map_vw_key = self.path
         return self._map_vw
 
+    def _iso_redraw(self):
+        """Redraw the isometric view at the current fit-to-canvas × zoom, keeping the
+        native render so zooming stays crisp. Pan is the canvas' own scroll (scan_dragto)."""
+        nat = getattr(self, "_iso_native", None)
+        if nat is None or not _HAVE_PIL:
+            return
+        from PIL import Image
+        cw = self.map_canvas.winfo_width(); ch = self.map_canvas.winfo_height()
+        fit = min(cw / nat.width, ch / nat.height) if (nat.width and nat.height and cw > 1 and ch > 1) else 1.0
+        scale = max(0.02, fit * getattr(self, "_iso_zoom", 1.0))
+        w = max(1, int(nat.width * scale)); h = max(1, int(nat.height * scale))
+        if max(w, h) > 6500:                             # bound the PhotoImage size / memory
+            k = 6500 / max(w, h); w = int(w * k); h = int(h * k)
+        disp = nat.resize((w, h), Image.NEAREST)
+        self._map_photo = ImageTk.PhotoImage(disp)
+        ix = max(0, (cw - w) // 2); iy = max(0, (ch - h) // 2)
+        self._map_place = (ix, iy)
+        self.map_canvas.delete("all")
+        self.map_canvas.create_image(ix, iy, anchor="nw", image=self._map_photo)
+        self.map_canvas.configure(scrollregion=(0, 0, max(cw, ix + w), max(ch, iy + h)))
+
+    def _map_wheel(self, ev):
+        if not getattr(self, "_map_is_iso", False):
+            return
+        step = 1.15 if getattr(ev, "delta", 0) > 0 else 1 / 1.15
+        z = max(0.25, min(getattr(self, "_iso_zoom", 1.0) * step, 8.0))
+        if abs(z - getattr(self, "_iso_zoom", 1.0)) > 1e-6:
+            self._iso_zoom = z
+            self._iso_redraw()
+
+    def _map_drag(self, ev):
+        if getattr(self, "_map_is_iso", False):
+            self.map_canvas.scan_dragto(ev.x, ev.y, gain=1)
+
     def _canvas_to_world(self, ev):
         ix, iy = getattr(self, "_map_place", (0, 0))
         cx = self.map_canvas.canvasx(ev.x) - ix
@@ -645,7 +688,10 @@ class Studio(tk.Tk):
         return int(x0 + cx / s), int(z0 + cy / s)
 
     def on_map_click(self, ev):
-        if self.world is None or getattr(self, "_map_is_iso", False):
+        if self.world is None:
+            return
+        if getattr(self, "_map_is_iso", False):
+            self.map_canvas.scan_mark(ev.x, ev.y)           # begin drag-to-pan
             return
         wx, wz = self._canvas_to_world(ev)
         try:
