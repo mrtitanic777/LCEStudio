@@ -1,0 +1,423 @@
+id,data,first_tu,to_id,to_data,name,to_name,note
+# What a block becomes when the target title update is too old to hold it.
+#
+# Keyed on (id, data) because most of what needs substituting is not a
+# separate block id at all - stone is id 1 and granite, diorite and andesite
+# are data values 1-6 on it, so an id-only table would either miss them or
+# flatten real stone along with them.
+#
+# "first_tu" is the earliest title update the block EXISTS in, taken from the
+# per-update pages on minecraft.wiki. A conversion to anything below that
+# applies the substitution; at or above it, nothing happens. data = -1 means
+# "any data value".
+#
+# Two sources feed this and they are not equal:
+#   * the wiki says when a block became AVAILABLE - authoritative
+#   * templates/block_first_seen.csv says when one was first SEEN in a sample
+#     world - a lower bound only, since a block nobody placed never appears
+# Where they disagree the wiki wins. TU25 is the worked example: the samples
+# put acacia and dark oak at TU31 because that is where they happened to be
+# built with, but the wiki has the wood arriving at TU25.
+#
+# The rule throughout is: replace with something that could plausibly have
+# been there, so the world still reads as natural. Air is the last resort,
+# never the default - a hole is more obvious than the wrong stone.
+
+# --- TU53, Java 1.12, World of Color --------------------------------------
+219,-1,53,54,0,Shulker Box,Chest,a container that keeps its contents
+220,-1,53,54,0,Shulker Box,Chest,
+221,-1,53,54,0,Shulker Box,Chest,
+222,-1,53,54,0,Shulker Box,Chest,
+223,-1,53,54,0,Shulker Box,Chest,
+224,-1,53,54,0,Shulker Box,Chest,
+225,-1,53,54,0,Shulker Box,Chest,
+226,-1,53,54,0,Shulker Box,Chest,
+227,-1,53,54,0,Shulker Box,Chest,
+228,-1,53,54,0,Shulker Box,Chest,
+229,-1,53,54,0,Shulker Box,Chest,
+230,-1,53,54,0,Shulker Box,Chest,
+231,-1,53,54,0,Shulker Box,Chest,
+232,-1,53,54,0,Shulker Box,Chest,
+233,-1,53,54,0,Shulker Box,Chest,
+234,-1,53,54,0,Shulker Box,Chest,
+235,-1,53,159,0,Glazed Terracotta,Stained Clay,the colour survives; the pattern does not
+251,-1,53,159,0,Concrete,Stained Clay,the same colour as a solid block
+252,-1,53,12,0,Concrete Powder,Sand,it behaves like sand and looks like it
+
+# --- TU43, Java 1.9 / 1.10 ------------------------------------------------
+206,-1,43,121,0,End Stone Bricks,End Stone,
+207,-1,43,0,0,Beetroots,Air,a crop
+208,-1,43,3,0,Dirt Path,Dirt,it is dirt with the top worn off
+212,-1,43,79,0,Frosted Ice,Ice,
+213,-1,43,87,0,Magma Block,Netherrack,both are the hot block of the Nether
+214,-1,43,87,0,Nether Wart Block,Netherrack,
+215,-1,43,112,0,Red Nether Bricks,Nether Bricks,
+216,-1,43,155,0,Bone Block,Block of Quartz,pale and pillar-shaped
+176,-1,43,0,0,Banner,Air,a banner is a thin decoration
+177,-1,43,0,0,Wall Banner,Air,
+
+# --- TU54, Java 1.11 / 1.12, Exploration and World of Color ---------------
+218,-1,54,29,0,Observer,Sticky Piston,both are the block that reacts to a change
+26,-1,54,26,0,Coloured Bed,Bed,TU54 added the 15 other colours; the bed itself is TU0
+
+# --- TU46, Java 1.10, the Holiday Update ----------------------------------
+201,-1,46,155,0,Purpur Block,Block of Quartz,the pale decorative block of its era
+202,-1,46,155,2,Purpur Pillar,Pillar Quartz Block,
+203,-1,46,156,0,Purpur Stairs,Quartz Stairs,
+204,-1,46,44,7,Purpur Slab,Quartz Slab,
+198,-1,46,50,5,End Rod,Torch,each is the small light on a surface
+199,-1,46,0,0,Chorus Plant,Air,a End plant with nothing older to be
+200,-1,46,0,0,Chorus Flower,Air,a End plant with nothing older to be
+
+# --- TU31, Java 1.8, the Bountiful Update ---------------------------------
+1,1,31,1,0,Granite,Stone,the stone variants are the whole point of this table
+1,2,31,1,0,Polished Granite,Stone,
+1,3,31,1,0,Diorite,Stone,
+1,4,31,1,0,Polished Diorite,Stone,
+1,5,31,1,0,Andesite,Stone,
+1,6,31,1,0,Polished Andesite,Stone,
+3,1,31,3,0,Coarse Dirt,Dirt,
+3,2,31,3,0,Podzol,Dirt,
+12,1,31,12,0,Red Sand,Sand,
+24,2,31,24,0,Smooth Sandstone,Sandstone,
+161,-1,31,18,0,Acacia/Dark Oak Leaves,Oak Leaves,TU31 added the leaves and saplings
+165,-1,31,35,13,Slime Block,Green Wool,green and about the right size
+168,-1,31,1,0,Prismarine,Stone,nothing older resembles it; stone keeps it solid
+169,-1,31,89,0,Sea Lantern,Glowstone,each is the bright block of its era
+174,-1,31,79,0,Packed Ice,Ice,
+179,-1,31,24,0,Red Sandstone,Sandstone,
+180,-1,31,128,0,Red Sandstone Stairs,Sandstone Stairs,
+181,-1,31,43,0,Red Sandstone Double Slab,Sandstone Double Slab,
+182,-1,31,44,1,Red Sandstone Slab,Sandstone Slab,
+
+# --- TU25, Java 1.7 -------------------------------------------------------
+162,-1,25,17,0,Acacia/Dark Oak Log,Oak Log,the wiki puts the wood at TU25
+# Stained glass is the one place a block ships EARLY. StainedGlassBlock and
+# StainedGlassPaneBlock are both in TU19.xex, six updates before the wiki has
+# them, and stay there through TU24. They are deliberately left at 25 anyway:
+# a class compiled into the binary does not prove the id is registered and
+# placeable, and the two errors are not equal. Dating them 19 when TU19 cannot
+# really hold them puts an unloadable id in the world; dating them 25 when it
+# could costs nothing but the colour of some glass.
+95,-1,25,20,0,Stained Glass,Glass,in TU19.xex from TU19 - see note above
+160,-1,25,102,0,Stained Glass Pane,Glass Pane,in TU19.xex from TU19 - see note above
+167,-1,25,96,0,Iron Trapdoor,Wooden Trapdoor,
+178,-1,25,151,0,Inverted Daylight Sensor,Daylight Sensor,
+
+# --- TU19, Java 1.6.4 -----------------------------------------------------
+159,-1,19,172,0,Stained Clay,Hardened Clay,and hardened clay itself follows below
+172,-1,19,1,0,Hardened Clay,Stone,
+173,-1,19,35,15,Block of Coal,Black Wool,the colour is the point of an ore block
+170,-1,19,3,0,Hay Bale,Dirt,
+157,-1,19,27,0,Activator Rail,Powered Rail,
+152,-1,19,35,14,Block of Redstone,Red Wool,the colour is the point of an ore block
+151,-1,19,44,0,Daylight Sensor,Stone Slab,
+158,-1,19,23,0,Dropper,Dispenser,
+154,-1,19,54,0,Hopper,Chest,
+149,-1,19,93,0,Redstone Comparator,Redstone Repeater,
+150,-1,19,94,0,Redstone Comparator (on),Redstone Repeater (on),
+147,-1,19,70,0,Light Weighted Pressure Plate,Stone Pressure Plate,
+148,-1,19,70,0,Heavy Weighted Pressure Plate,Stone Pressure Plate,
+138,-1,19,20,0,Beacon,Glass,
+146,-1,19,54,0,Trapped Chest,Chest,
+137,-1,19,7,0,Command Block,Bedrock,an operator block becomes the other block a player cannot break
+
+# --- TU14, Java 1.3.1 -----------------------------------------------------
+129,-1,14,1,0,Emerald Ore,Stone,
+133,-1,14,35,13,Block of Emerald,Green Wool,the colour is the point of an ore block
+130,-1,14,54,0,Ender Chest,Chest,
+145,-1,14,42,0,Anvil,Block of Iron,
+140,-1,14,0,0,Flower Pot,Air,a pot is small enough that a hole is not obvious
+139,-1,14,4,0,Cobblestone Wall,Cobblestone,
+153,-1,14,87,0,Nether Quartz Ore,Netherrack,it is only ever found in netherrack
+155,-1,14,35,0,Block of Quartz,White Wool,the colour is the point of an ore block
+156,-1,14,109,0,Quartz Stairs,Stone Brick Stairs,
+171,-1,14,0,0,Carpet,Air,carpet is one pixel thick
+141,-1,14,59,0,Carrots,Wheat,a crop of the same shape in the same soil
+142,-1,14,59,0,Potatoes,Wheat,a crop of the same shape in the same soil
+131,-1,14,69,0,Tripwire Hook,Lever,each is the small redstone fitting on a wall
+132,-1,14,0,0,Tripwire,Air,a string laid across the floor
+# Wooden slabs get ids 125/126 when Java 1.3.1 splits them off id 44. Before
+# that a wooden slab IS 44:2, the plank-textured variant of the stone slab -
+# so the substitution is the same block, not a compromise. TU9's binary
+# already carries WoodSlabTile, but the class cannot say which id it sat at,
+# and 44:2 renders identically either way.
+126,-1,14,44,2,Wooden Slab,Stone Slab (wood),44:2 is the plank-textured slab that already existed
+125,-1,14,43,2,Double Wooden Slab,Double Stone Slab (wood),
+
+# --- TU12, Java 1.2.4 -----------------------------------------------------
+123,-1,12,89,0,Redstone Lamp,Glowstone,
+124,-1,12,89,0,Redstone Lamp (lit),Glowstone,
+144,-1,12,0,0,Mob Head,Air,
+127,-1,12,0,0,Cocoa,Air,a pod on the side of a jungle log
+
+# --- TU9, Java 1.1 --------------------------------------------------------
+114,-1,9,109,0,Nether Brick Stairs,Stone Brick Stairs,
+128,-1,9,67,0,Sandstone Stairs,Cobblestone Stairs,
+
+# --- TU7, Java 1.0.0 ------------------------------------------------------
+# The End arrives whole in Java 1.0.0, so end stone, the portal, its frame and
+# the dragon egg all date from here. The frame and the egg sat at TU9 in this
+# table until the binaries were read: TheEndPortalFrameTile and EggTile are
+# both in TU7.xex and absent from TU6, and end stone was already dated TU7
+# two rows down.
+120,-1,7,7,0,End Portal Frame,Bedrock,
+122,-1,7,0,0,Dragon Egg,Air,
+119,-1,7,0,0,End Portal,Air,there is no End to lead to
+115,-1,7,0,0,Nether Wart,Air,a crop
+112,-1,7,45,0,Nether Bricks,Bricks,
+113,-1,7,85,0,Nether Brick Fence,Oak Fence,
+117,-1,7,0,0,Brewing Stand,Air,
+116,-1,7,47,0,Enchantment Table,Bookshelf,
+118,-1,7,0,0,Cauldron,Air,
+111,-1,7,0,0,Lily Pad,Air,
+110,-1,7,3,0,Mycelium,Dirt,
+121,-1,7,24,0,End Stone,Sandstone,both are the pale stone of their world
+
+# --- TU5, Java Beta 1.8.1 -------------------------------------------------
+98,-1,5,4,0,Stone Bricks,Cobblestone,
+109,-1,5,67,0,Stone Brick Stairs,Cobblestone Stairs,
+108,-1,5,67,0,Brick Stairs,Cobblestone Stairs,
+101,-1,5,85,0,Iron Bars,Oak Fence,
+102,-1,5,20,0,Glass Pane,Glass,
+107,-1,5,85,0,Fence Gate,Oak Fence,
+106,-1,5,0,0,Vines,Air,
+103,-1,5,35,13,Melon,Green Wool,green and a full block
+105,-1,5,0,0,Melon Stem,Air,
+104,-1,5,0,0,Pumpkin Stem,Air,
+99,-1,5,0,0,Brown Mushroom Block,Air,
+100,-1,5,0,0,Red Mushroom Block,Air,
+97,-1,5,1,0,Infested Stone,Stone,it looks like stone and that is the joke
+
+# --- TU3 ------------------------------------------------------------------
+# This whole tier came from the executables, not the wiki. TU1.xex and TU2.xex
+# contain no piston class at all; TU3.xex carries six of them - the base, the
+# extension, the moving piece, the entity, the renderer and the item - so the
+# feature lands whole at TU3. Without these rows a piston converted to TU1 or
+# TU2 is written into a build with nothing to load it.
+33,-1,3,4,0,Piston,Cobblestone,cobblestone is most of what a piston is made of
+29,-1,3,4,0,Sticky Piston,Cobblestone,
+34,-1,3,4,0,Piston Head,Cobblestone,the extended arm stays solid rather than leaving a gap
+36,-1,3,0,0,Moving Piston,Air,a transient block that only exists mid-push
+
+# 0xFFFF - every bit set - is not a block. Three coral wall fans read as this
+# in one world; the same three coordinates in a later save of the same build
+# read 266:12, 267:14 and 268:12, the wall fans they were meant to be.
+#
+# What the evidence actually supports, after two wrong statements here:
+#   * NOT "no water" - 4 waterlogged rails with no water on any side decode
+#     perfectly well as rails.
+#   * "waterlogged next to FLOWING water" is still consistent with everything
+#     seen. It is the one thing that differed at those three coordinates
+#     between the two saves. The rails cannot test it: all 20 waterlogged
+#     ones sit in SOURCE water or none at all, never flowing.
+#
+# So the trigger is not proven, only narrowed. What is certain is that the
+# game does not keep this value, and air is the right answer for it.
+2047,15,69,0,0,invalid block state,air,every bit set - a block the game did not keep
+# --- TU69, Java 1.13, Update Aquatic ---------------------------------
+256,-1,69,138,0,conduit,beacon,each is its era's beacon
+257,-1,69,86,0,pumpkin,carved_pumpkin,uncarved vs carved pumpkin
+258,-1,69,0,0,kelp_plant,air,a thin water plant with nothing older to be
+259,0,69,35,11,tube_coral_block,blue_wool,blue wool keeps the colour
+259,1,69,35,6,brain_coral_block,pink_wool,pink wool keeps the colour
+259,2,69,35,2,bubble_coral_block,magenta_wool,magenta wool keeps the colour
+259,3,69,35,14,fire_coral_block,red_wool,red wool keeps the colour
+259,4,69,35,4,horn_coral_block,yellow_wool,yellow wool keeps the colour
+259,8,69,35,7,dead_tube_coral_block,gray_wool,grey wool - it is dead coral
+259,9,69,35,7,dead_brain_coral_block,gray_wool,grey wool - it is dead coral
+259,10,69,35,7,dead_bubble_coral_block,gray_wool,grey wool - it is dead coral
+259,11,69,35,7,dead_fire_coral_block,gray_wool,grey wool - it is dead coral
+259,12,69,35,7,dead_horn_coral_block,gray_wool,grey wool - it is dead coral
+263,-1,69,0,0,tube_coral,air,a thin water plant with nothing older to be
+264,-1,69,0,0,tube_coral_fan,air,a thin water plant with nothing older to be
+265,-1,69,0,0,dead_tube_coral_fan,air,a thin water plant with nothing older to be
+266,-1,69,0,0,tube_coral_wall_fan,air,a thin water plant with nothing older to be
+267,-1,69,0,0,bubble_coral_wall_fan,air,a thin water plant with nothing older to be
+268,-1,69,0,0,horn_coral_wall_fan,air,a thin water plant with nothing older to be
+269,-1,69,170,0,dried_kelp_block,hay_block,a dried plant block
+270,-1,69,0,0,seagrass,air,a thin water plant with nothing older to be
+271,-1,69,0,0,sea_pickle,air,a thin water plant with nothing older to be
+272,-1,69,9,0,bubble_column,water,it is water
+273,-1,69,174,0,blue_ice,packed_ice,packed ice, TU31
+274,0,69,96,0,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,1,69,96,1,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,2,69,96,2,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,3,69,96,3,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,4,69,96,4,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,5,69,96,5,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,6,69,96,6,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,7,69,96,7,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,8,69,96,8,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,9,69,96,9,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,10,69,96,10,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,11,69,96,11,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,12,69,96,12,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,13,69,96,13,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,14,69,96,14,spruce_trapdoor,oak_trapdoor,oak trapdoor
+274,15,69,96,15,spruce_trapdoor,oak_trapdoor,oak trapdoor
+275,0,69,96,0,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,1,69,96,1,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,2,69,96,2,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,3,69,96,3,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,4,69,96,4,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,5,69,96,5,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,6,69,96,6,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,7,69,96,7,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,8,69,96,8,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,9,69,96,9,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,10,69,96,10,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,11,69,96,11,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,12,69,96,12,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,13,69,96,13,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,14,69,96,14,birch_trapdoor,oak_trapdoor,oak trapdoor
+275,15,69,96,15,birch_trapdoor,oak_trapdoor,oak trapdoor
+276,0,69,96,0,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,1,69,96,1,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,2,69,96,2,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,3,69,96,3,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,4,69,96,4,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,5,69,96,5,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,6,69,96,6,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,7,69,96,7,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,8,69,96,8,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,9,69,96,9,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,10,69,96,10,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,11,69,96,11,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,12,69,96,12,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,13,69,96,13,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,14,69,96,14,jungle_trapdoor,oak_trapdoor,oak trapdoor
+276,15,69,96,15,jungle_trapdoor,oak_trapdoor,oak trapdoor
+277,0,69,96,0,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,1,69,96,1,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,2,69,96,2,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,3,69,96,3,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,4,69,96,4,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,5,69,96,5,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,6,69,96,6,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,7,69,96,7,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,8,69,96,8,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,9,69,96,9,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,10,69,96,10,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,11,69,96,11,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,12,69,96,12,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,13,69,96,13,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,14,69,96,14,acacia_trapdoor,oak_trapdoor,oak trapdoor
+277,15,69,96,15,acacia_trapdoor,oak_trapdoor,oak trapdoor
+278,0,69,96,0,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,1,69,96,1,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,2,69,96,2,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,3,69,96,3,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,4,69,96,4,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,5,69,96,5,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,6,69,96,6,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,7,69,96,7,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,8,69,96,8,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,9,69,96,9,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,10,69,96,10,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,11,69,96,11,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,12,69,96,12,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,13,69,96,13,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,14,69,96,14,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+278,15,69,96,15,dark_oak_trapdoor,oak_trapdoor,oak trapdoor
+279,-1,69,0,0,turtle_egg,air,a thin water plant with nothing older to be
+291,-1,69,168,0,prismarine_stairs,prismarine,prismarine, TU31
+292,-1,69,168,1,prismarine_brick_stairs,prismarine_bricks,prismarine bricks, TU31
+293,-1,69,168,2,dark_prismarine_stairs,dark_prismarine,dark prismarine, TU31
+295,0,69,17,1,stripped_spruce_log,spruce_log,the same log with bark
+295,4,69,17,5,stripped_spruce_log,spruce_log,the same log with bark
+295,8,69,17,9,stripped_spruce_log,spruce_log,the same log with bark
+296,0,69,17,2,stripped_birch_log,birch_log,the same log with bark
+296,4,69,17,6,stripped_birch_log,birch_log,the same log with bark
+296,8,69,17,10,stripped_birch_log,birch_log,the same log with bark
+297,0,69,17,3,stripped_jungle_log,jungle_log,the same log with bark
+297,4,69,17,7,stripped_jungle_log,jungle_log,the same log with bark
+297,8,69,17,11,stripped_jungle_log,jungle_log,the same log with bark
+298,0,69,162,0,stripped_acacia_log,acacia_log,the same log with bark
+298,4,69,162,4,stripped_acacia_log,acacia_log,the same log with bark
+298,8,69,162,8,stripped_acacia_log,acacia_log,the same log with bark
+299,0,69,162,1,stripped_dark_oak_log,dark_oak_log,the same log with bark
+299,4,69,162,5,stripped_dark_oak_log,dark_oak_log,the same log with bark
+299,8,69,162,9,stripped_dark_oak_log,dark_oak_log,the same log with bark
+300,0,69,17,0,stripped_oak_log,oak_log,the same log with bark
+300,4,69,17,4,stripped_oak_log,oak_log,the same log with bark
+300,8,69,17,8,stripped_oak_log,oak_log,the same log with bark
+301,0,69,72,0,acacia_pressure_plate,oak_pressure_plate,oak pressure plate
+301,1,69,72,1,acacia_pressure_plate,oak_pressure_plate,oak pressure plate
+302,0,69,72,0,birch_pressure_plate,oak_pressure_plate,oak pressure plate
+302,1,69,72,1,birch_pressure_plate,oak_pressure_plate,oak pressure plate
+303,0,69,72,0,dark_oak_pressure_plate,oak_pressure_plate,oak pressure plate
+303,1,69,72,1,dark_oak_pressure_plate,oak_pressure_plate,oak pressure plate
+304,0,69,72,0,jungle_pressure_plate,oak_pressure_plate,oak pressure plate
+304,1,69,72,1,jungle_pressure_plate,oak_pressure_plate,oak pressure plate
+305,0,69,72,0,spruce_pressure_plate,oak_pressure_plate,oak pressure plate
+305,1,69,72,1,spruce_pressure_plate,oak_pressure_plate,oak pressure plate
+306,0,69,143,0,acacia_button,oak_button,oak button
+306,1,69,143,1,acacia_button,oak_button,oak button
+306,2,69,143,2,acacia_button,oak_button,oak button
+306,3,69,143,3,acacia_button,oak_button,oak button
+306,4,69,143,4,acacia_button,oak_button,oak button
+306,5,69,143,5,acacia_button,oak_button,oak button
+306,8,69,143,8,acacia_button,oak_button,oak button
+306,9,69,143,9,acacia_button,oak_button,oak button
+306,10,69,143,10,acacia_button,oak_button,oak button
+306,11,69,143,11,acacia_button,oak_button,oak button
+306,12,69,143,12,acacia_button,oak_button,oak button
+306,13,69,143,13,acacia_button,oak_button,oak button
+307,0,69,143,0,birch_button,oak_button,oak button
+307,1,69,143,1,birch_button,oak_button,oak button
+307,2,69,143,2,birch_button,oak_button,oak button
+307,3,69,143,3,birch_button,oak_button,oak button
+307,4,69,143,4,birch_button,oak_button,oak button
+307,5,69,143,5,birch_button,oak_button,oak button
+307,8,69,143,8,birch_button,oak_button,oak button
+307,9,69,143,9,birch_button,oak_button,oak button
+307,10,69,143,10,birch_button,oak_button,oak button
+307,11,69,143,11,birch_button,oak_button,oak button
+307,12,69,143,12,birch_button,oak_button,oak button
+307,13,69,143,13,birch_button,oak_button,oak button
+308,0,69,143,0,dark_oak_button,oak_button,oak button
+308,1,69,143,1,dark_oak_button,oak_button,oak button
+308,2,69,143,2,dark_oak_button,oak_button,oak button
+308,3,69,143,3,dark_oak_button,oak_button,oak button
+308,4,69,143,4,dark_oak_button,oak_button,oak button
+308,5,69,143,5,dark_oak_button,oak_button,oak button
+308,8,69,143,8,dark_oak_button,oak_button,oak button
+308,9,69,143,9,dark_oak_button,oak_button,oak button
+308,10,69,143,10,dark_oak_button,oak_button,oak button
+308,11,69,143,11,dark_oak_button,oak_button,oak button
+308,12,69,143,12,dark_oak_button,oak_button,oak button
+308,13,69,143,13,dark_oak_button,oak_button,oak button
+309,0,69,143,0,jungle_button,oak_button,oak button
+309,1,69,143,1,jungle_button,oak_button,oak button
+309,2,69,143,2,jungle_button,oak_button,oak button
+309,3,69,143,3,jungle_button,oak_button,oak button
+309,4,69,143,4,jungle_button,oak_button,oak button
+309,5,69,143,5,jungle_button,oak_button,oak button
+309,8,69,143,8,jungle_button,oak_button,oak button
+309,9,69,143,9,jungle_button,oak_button,oak button
+309,10,69,143,10,jungle_button,oak_button,oak button
+309,11,69,143,11,jungle_button,oak_button,oak button
+309,12,69,143,12,jungle_button,oak_button,oak button
+309,13,69,143,13,jungle_button,oak_button,oak button
+310,0,69,143,0,spruce_button,oak_button,oak button
+310,1,69,143,1,spruce_button,oak_button,oak button
+310,2,69,143,2,spruce_button,oak_button,oak button
+310,3,69,143,3,spruce_button,oak_button,oak button
+310,4,69,143,4,spruce_button,oak_button,oak button
+310,5,69,143,5,spruce_button,oak_button,oak button
+310,8,69,143,8,spruce_button,oak_button,oak button
+310,9,69,143,9,spruce_button,oak_button,oak button
+310,10,69,143,10,spruce_button,oak_button,oak button
+310,11,69,143,11,spruce_button,oak_button,oak button
+310,12,69,143,12,spruce_button,oak_button,oak button
+310,13,69,143,13,spruce_button,oak_button,oak button
+311,0,69,168,0,prismarine_slab,prismarine,prismarine, TU31
+311,1,69,168,1,prismarine_brick_slab,prismarine_bricks,prismarine bricks, TU31
+311,2,69,168,2,dark_prismarine_slab,dark_prismarine,dark prismarine, TU31
+312,0,69,168,0,prismarine_slab,prismarine,prismarine, TU31
+312,1,69,168,1,prismarine_brick_slab,prismarine_bricks,prismarine bricks, TU31
+312,2,69,168,2,dark_prismarine_slab,dark_prismarine,dark prismarine, TU31
+312,8,69,168,0,prismarine_slab,prismarine,prismarine, TU31
+312,9,69,168,1,prismarine_brick_slab,prismarine_bricks,prismarine bricks, TU31
+312,10,69,168,2,dark_prismarine_slab,dark_prismarine,dark prismarine, TU31

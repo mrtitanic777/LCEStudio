@@ -1,0 +1,26 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller build artifacts (the exe is rebuilt from the spec)
+/build/
+/dist/
+/LCEStudio.exe
+*.manifest
+
+# Local recovery dump / backups / save data (not source)
+/lce-recovered/
+/BACKUP1/
+*.bak
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# nested standalone repo (its own git history)
+/beta-seed-finder/

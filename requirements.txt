@@ -1,0 +1,3 @@
+Pillow>=9        # 2D map / slice visualizers
+pyglet>=2.1      # 3D fly-through viewer
+numpy>=1.26      # 3D mesher

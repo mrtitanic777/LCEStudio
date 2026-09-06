@@ -1,0 +1,146 @@
+{
+ "minecraft:banner": {
+  "camel": "Banner",
+  "first_tu": 46
+ },
+ "minecraft:bat": {
+  "camel": "Bat",
+  "first_tu": 19
+ },
+ "minecraft:blaze": {
+  "camel": "Blaze",
+  "first_tu": 46
+ },
+ "minecraft:cauldron": {
+  "camel": "Cauldron",
+  "first_tu": 46
+ },
+ "minecraft:cave_spider": {
+  "camel": "CaveSpider",
+  "first_tu": 48
+ },
+ "minecraft:chest": {
+  "camel": "Chest",
+  "first_tu": 0
+ },
+ "minecraft:chest_minecart": {
+  "camel": "MinecartChest",
+  "first_tu": 19
+ },
+ "minecraft:chicken": {
+  "camel": "Chicken",
+  "first_tu": 0
+ },
+ "minecraft:cow": {
+  "camel": "Cow",
+  "first_tu": 0
+ },
+ "minecraft:creeper": {
+  "camel": "Creeper",
+  "first_tu": 0
+ },
+ "minecraft:ender_Chest": {
+  "camel": "EnderChest",
+  "first_tu": 46
+ },
+ "minecraft:ender_crystal": {
+  "camel": "EnderCrystal",
+  "first_tu": 7
+ },
+ "minecraft:ender_dragon": {
+  "camel": "EnderDragon",
+  "first_tu": 7
+ },
+ "minecraft:enderman": {
+  "camel": "Enderman",
+  "first_tu": 5
+ },
+ "minecraft:falling_block": {
+  "camel": "FallingSand",
+  "first_tu": 5
+ },
+ "minecraft:furnace": {
+  "camel": "Furnace",
+  "first_tu": 15
+ },
+ "minecraft:horse": {
+  "camel": "EntityHorse",
+  "first_tu": 19
+ },
+ "minecraft:item": {
+  "camel": "Item",
+  "first_tu": 0
+ },
+ "minecraft:item_frame": {
+  "camel": "ItemFrame",
+  "first_tu": 46
+ },
+ "minecraft:mob_spawner": {
+  "camel": "MobSpawner",
+  "first_tu": 0
+ },
+ "minecraft:mooshroom": {
+  "camel": "MushroomCow",
+  "first_tu": 38
+ },
+ "minecraft:ocelot": {
+  "camel": "Ozelot",
+  "first_tu": 12
+ },
+ "minecraft:pig": {
+  "camel": "Pig",
+  "first_tu": 0
+ },
+ "minecraft:rabbit": {
+  "camel": "Rabbit",
+  "first_tu": 32
+ },
+ "minecraft:sheep": {
+  "camel": "Sheep",
+  "first_tu": 0
+ },
+ "minecraft:shulker": {
+  "camel": "Shulker",
+  "first_tu": 46
+ },
+ "minecraft:silverfish": {
+  "camel": "Silverfish",
+  "first_tu": 46
+ },
+ "minecraft:skeleton": {
+  "camel": "Skeleton",
+  "first_tu": 0
+ },
+ "minecraft:skull": {
+  "camel": "Skull",
+  "first_tu": 46
+ },
+ "minecraft:slime": {
+  "camel": "Slime",
+  "first_tu": 19
+ },
+ "minecraft:spider": {
+  "camel": "Spider",
+  "first_tu": 0
+ },
+ "minecraft:squid": {
+  "camel": "Squid",
+  "first_tu": 1
+ },
+ "minecraft:villager": {
+  "camel": "Villager",
+  "first_tu": 8
+ },
+ "minecraft:witch": {
+  "camel": "Witch",
+  "first_tu": 20
+ },
+ "minecraft:wolf": {
+  "camel": "Wolf",
+  "first_tu": 8
+ },
+ "minecraft:zombie": {
+  "camel": "Zombie",
+  "first_tu": 0
+ }
+}

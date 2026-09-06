@@ -1,0 +1,962 @@
+{
+ "Banner": {
+  "first_tu": 46,
+  "forms": [
+   "Banner"
+  ]
+ },
+ "Bat": {
+  "first_tu": 19,
+  "forms": [
+   "Bat"
+  ]
+ },
+ "Blaze": {
+  "first_tu": 46,
+  "forms": [
+   "Blaze"
+  ]
+ },
+ "Cauldron": {
+  "first_tu": 46,
+  "forms": [
+   "Cauldron"
+  ]
+ },
+ "CaveSpider": {
+  "first_tu": 48,
+  "forms": [
+   "CaveSpider"
+  ]
+ },
+ "Chest": {
+  "first_tu": 0,
+  "forms": [
+   "Chest"
+  ]
+ },
+ "Chicken": {
+  "first_tu": 0,
+  "forms": [
+   "Chicken"
+  ]
+ },
+ "Cow": {
+  "first_tu": 0,
+  "forms": [
+   "Cow"
+  ]
+ },
+ "Creeper": {
+  "first_tu": 0,
+  "forms": [
+   "Creeper"
+  ]
+ },
+ "EnderChest": {
+  "first_tu": 46,
+  "forms": [
+   "EnderChest"
+  ]
+ },
+ "EnderCrystal": {
+  "first_tu": 7,
+  "forms": [
+   "EnderCrystal"
+  ]
+ },
+ "EnderDragon": {
+  "first_tu": 7,
+  "forms": [
+   "EnderDragon"
+  ]
+ },
+ "Enderman": {
+  "first_tu": 5,
+  "forms": [
+   "Enderman"
+  ]
+ },
+ "EntityHorse": {
+  "first_tu": 19,
+  "forms": [
+   "EntityHorse"
+  ]
+ },
+ "FallingSand": {
+  "first_tu": 5,
+  "forms": [
+   "FallingSand"
+  ]
+ },
+ "Furnace": {
+  "first_tu": 15,
+  "forms": [
+   "Furnace"
+  ]
+ },
+ "Item": {
+  "first_tu": 0,
+  "forms": [
+   "Item"
+  ]
+ },
+ "ItemFrame": {
+  "first_tu": 46,
+  "forms": [
+   "ItemFrame"
+  ]
+ },
+ "MinecartChest": {
+  "first_tu": 19,
+  "forms": [
+   "MinecartChest"
+  ]
+ },
+ "MobSpawner": {
+  "first_tu": 0,
+  "forms": [
+   "MobSpawner"
+  ]
+ },
+ "MushroomCow": {
+  "first_tu": 38,
+  "forms": [
+   "MushroomCow"
+  ]
+ },
+ "Ozelot": {
+  "first_tu": 12,
+  "forms": [
+   "Ozelot"
+  ]
+ },
+ "Pig": {
+  "first_tu": 0,
+  "forms": [
+   "Pig"
+  ]
+ },
+ "Rabbit": {
+  "first_tu": 32,
+  "forms": [
+   "Rabbit"
+  ]
+ },
+ "Sheep": {
+  "first_tu": 0,
+  "forms": [
+   "Sheep"
+  ]
+ },
+ "Shulker": {
+  "first_tu": 46,
+  "forms": [
+   "Shulker"
+  ]
+ },
+ "Silverfish": {
+  "first_tu": 46,
+  "forms": [
+   "Silverfish"
+  ]
+ },
+ "Skeleton": {
+  "first_tu": 0,
+  "forms": [
+   "Skeleton"
+  ]
+ },
+ "Skull": {
+  "first_tu": 46,
+  "forms": [
+   "Skull"
+  ]
+ },
+ "Slime": {
+  "first_tu": 19,
+  "forms": [
+   "Slime"
+  ]
+ },
+ "Spider": {
+  "first_tu": 0,
+  "forms": [
+   "Spider"
+  ]
+ },
+ "Squid": {
+  "first_tu": 1,
+  "forms": [
+   "Squid"
+  ]
+ },
+ "Villager": {
+  "first_tu": 8,
+  "forms": [
+   "Villager"
+  ]
+ },
+ "Witch": {
+  "first_tu": 20,
+  "forms": [
+   "Witch"
+  ]
+ },
+ "Wolf": {
+  "first_tu": 8,
+  "forms": [
+   "Wolf"
+  ]
+ },
+ "Zombie": {
+  "first_tu": 0,
+  "forms": [
+   "Zombie"
+  ]
+ },
+ "minecraft:apple": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:apple"
+  ]
+ },
+ "minecraft:arrow": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:arrow"
+  ]
+ },
+ "minecraft:banner": {
+  "first_tu": 48,
+  "forms": [
+   "minecraft:banner"
+  ]
+ },
+ "minecraft:bat": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:bat"
+  ]
+ },
+ "minecraft:bed": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:bed"
+  ]
+ },
+ "minecraft:beetroot": {
+  "first_tu": 59,
+  "forms": [
+   "minecraft:beetroot"
+  ]
+ },
+ "minecraft:beetroot_seeds": {
+  "first_tu": 59,
+  "forms": [
+   "minecraft:beetroot_seeds"
+  ]
+ },
+ "minecraft:blaze": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:blaze"
+  ]
+ },
+ "minecraft:bone": {
+  "first_tu": 75,
+  "forms": [
+   "minecraft:bone"
+  ]
+ },
+ "minecraft:book": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:book"
+  ]
+ },
+ "minecraft:bread": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:bread"
+  ]
+ },
+ "minecraft:brewing_stand": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:brewing_stand"
+  ]
+ },
+ "minecraft:brown_mushroom": {
+  "first_tu": 35,
+  "forms": [
+   "minecraft:brown_mushroom"
+  ]
+ },
+ "minecraft:bucket": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:bucket"
+  ]
+ },
+ "minecraft:carrot": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:carrot"
+  ]
+ },
+ "minecraft:cauldron": {
+  "first_tu": 64,
+  "forms": [
+   "minecraft:cauldron"
+  ]
+ },
+ "minecraft:cave_spider": {
+  "first_tu": 60,
+  "forms": [
+   "minecraft:cave_spider"
+  ]
+ },
+ "minecraft:chest": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:chest"
+  ]
+ },
+ "minecraft:chest_minecart": {
+  "first_tu": 60,
+  "forms": [
+   "minecraft:chest_minecart"
+  ]
+ },
+ "minecraft:chicken": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:chicken"
+  ]
+ },
+ "minecraft:chorus_fruit": {
+  "first_tu": 55,
+  "forms": [
+   "minecraft:chorus_fruit"
+  ]
+ },
+ "minecraft:coal": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:coal"
+  ]
+ },
+ "minecraft:compass": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:compass"
+  ]
+ },
+ "minecraft:cooked_fish": {
+  "first_tu": 61,
+  "forms": [
+   "minecraft:cooked_fish"
+  ]
+ },
+ "minecraft:cow": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:cow"
+  ]
+ },
+ "minecraft:diamond": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:diamond"
+  ]
+ },
+ "minecraft:diamond_horse_armor": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:diamond_horse_armor"
+  ]
+ },
+ "minecraft:diamond_pickaxe": {
+  "first_tu": 46,
+  "forms": [
+   "minecraft:diamond_pickaxe"
+  ]
+ },
+ "minecraft:diamond_shovel": {
+  "first_tu": 46,
+  "forms": [
+   "minecraft:diamond_shovel"
+  ]
+ },
+ "minecraft:dispenser": {
+  "first_tu": 58,
+  "forms": [
+   "minecraft:dispenser"
+  ]
+ },
+ "minecraft:dolphin": {
+  "first_tu": 72,
+  "forms": [
+   "minecraft:dolphin"
+  ]
+ },
+ "minecraft:donkey": {
+  "first_tu": 58,
+  "forms": [
+   "minecraft:donkey"
+  ]
+ },
+ "minecraft:double_plant": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:double_plant"
+  ]
+ },
+ "minecraft:dye": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:dye"
+  ]
+ },
+ "minecraft:elder_guardian": {
+  "first_tu": 60,
+  "forms": [
+   "minecraft:elder_guardian"
+  ]
+ },
+ "minecraft:elytra": {
+  "first_tu": 46,
+  "forms": [
+   "minecraft:elytra"
+  ]
+ },
+ "minecraft:emerald": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:emerald"
+  ]
+ },
+ "minecraft:enchanted_book": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:enchanted_book"
+  ]
+ },
+ "minecraft:ender_Chest": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:ender_Chest"
+  ]
+ },
+ "minecraft:ender_crystal": {
+  "first_tu": 56,
+  "forms": [
+   "minecraft:ender_crystal"
+  ]
+ },
+ "minecraft:ender_pearl": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:ender_pearl"
+  ]
+ },
+ "minecraft:falling_block": {
+  "first_tu": 75,
+  "forms": [
+   "minecraft:falling_block"
+  ]
+ },
+ "minecraft:fish": {
+  "first_tu": 61,
+  "forms": [
+   "minecraft:fish"
+  ]
+ },
+ "minecraft:flint_and_steel": {
+  "first_tu": 37,
+  "forms": [
+   "minecraft:flint_and_steel"
+  ]
+ },
+ "minecraft:flower_pot": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:flower_pot"
+  ]
+ },
+ "minecraft:furnace": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:furnace"
+  ]
+ },
+ "minecraft:gold_ingot": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:gold_ingot"
+  ]
+ },
+ "minecraft:golden_apple": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:golden_apple"
+  ]
+ },
+ "minecraft:golden_chestplate": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:golden_chestplate"
+  ]
+ },
+ "minecraft:golden_horse_armor": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:golden_horse_armor"
+  ]
+ },
+ "minecraft:golden_sword": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:golden_sword"
+  ]
+ },
+ "minecraft:gravel": {
+  "first_tu": 68,
+  "forms": [
+   "minecraft:gravel"
+  ]
+ },
+ "minecraft:gunpowder": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:gunpowder"
+  ]
+ },
+ "minecraft:horse": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:horse"
+  ]
+ },
+ "minecraft:iron_axe": {
+  "first_tu": 47,
+  "forms": [
+   "minecraft:iron_axe"
+  ]
+ },
+ "minecraft:iron_boots": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:iron_boots"
+  ]
+ },
+ "minecraft:iron_chestplate": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:iron_chestplate"
+  ]
+ },
+ "minecraft:iron_door": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:iron_door"
+  ]
+ },
+ "minecraft:iron_helmet": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:iron_helmet"
+  ]
+ },
+ "minecraft:iron_horse_armor": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:iron_horse_armor"
+  ]
+ },
+ "minecraft:iron_ingot": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:iron_ingot"
+  ]
+ },
+ "minecraft:iron_leggings": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:iron_leggings"
+  ]
+ },
+ "minecraft:iron_pickaxe": {
+  "first_tu": 38,
+  "forms": [
+   "minecraft:iron_pickaxe"
+  ]
+ },
+ "minecraft:iron_shovel": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:iron_shovel"
+  ]
+ },
+ "minecraft:iron_sword": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:iron_sword"
+  ]
+ },
+ "minecraft:item": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:item"
+  ]
+ },
+ "minecraft:item_frame": {
+  "first_tu": 57,
+  "forms": [
+   "minecraft:item_frame"
+  ]
+ },
+ "minecraft:ladder": {
+  "first_tu": 50,
+  "forms": [
+   "minecraft:ladder"
+  ]
+ },
+ "minecraft:leather": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:leather"
+  ]
+ },
+ "minecraft:leather_leggings": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:leather_leggings"
+  ]
+ },
+ "minecraft:llama": {
+  "first_tu": 61,
+  "forms": [
+   "minecraft:llama"
+  ]
+ },
+ "minecraft:melon_seeds": {
+  "first_tu": 36,
+  "forms": [
+   "minecraft:melon_seeds"
+  ]
+ },
+ "minecraft:mob_spawner": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:mob_spawner"
+  ]
+ },
+ "minecraft:mooshroom": {
+  "first_tu": 58,
+  "forms": [
+   "minecraft:mooshroom"
+  ]
+ },
+ "minecraft:mutton": {
+  "first_tu": 37,
+  "forms": [
+   "minecraft:mutton"
+  ]
+ },
+ "minecraft:name_tag": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:name_tag"
+  ]
+ },
+ "minecraft:nether_wart": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:nether_wart"
+  ]
+ },
+ "minecraft:obsidian": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:obsidian"
+  ]
+ },
+ "minecraft:ocelot": {
+  "first_tu": 58,
+  "forms": [
+   "minecraft:ocelot"
+  ]
+ },
+ "minecraft:paper": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:paper"
+  ]
+ },
+ "minecraft:parrot": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:parrot"
+  ]
+ },
+ "minecraft:pig": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:pig"
+  ]
+ },
+ "minecraft:polar_bear": {
+  "first_tu": 59,
+  "forms": [
+   "minecraft:polar_bear"
+  ]
+ },
+ "minecraft:porkchop": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:porkchop"
+  ]
+ },
+ "minecraft:potato": {
+  "first_tu": 39,
+  "forms": [
+   "minecraft:potato"
+  ]
+ },
+ "minecraft:potion": {
+  "first_tu": 46,
+  "forms": [
+   "minecraft:potion"
+  ]
+ },
+ "minecraft:pufferfish": {
+  "first_tu": 75,
+  "forms": [
+   "minecraft:pufferfish"
+  ]
+ },
+ "minecraft:pumpkin_seeds": {
+  "first_tu": 36,
+  "forms": [
+   "minecraft:pumpkin_seeds"
+  ]
+ },
+ "minecraft:rabbit": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:rabbit"
+  ]
+ },
+ "minecraft:rail": {
+  "first_tu": 33,
+  "forms": [
+   "minecraft:rail"
+  ]
+ },
+ "minecraft:record_13": {
+  "first_tu": 32,
+  "forms": [
+   "minecraft:record_13"
+  ]
+ },
+ "minecraft:record_cat": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:record_cat"
+  ]
+ },
+ "minecraft:red_flower": {
+  "first_tu": 37,
+  "forms": [
+   "minecraft:red_flower"
+  ]
+ },
+ "minecraft:red_mushroom": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:red_mushroom"
+  ]
+ },
+ "minecraft:redstone": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:redstone"
+  ]
+ },
+ "minecraft:rotten_flesh": {
+  "first_tu": 34,
+  "forms": [
+   "minecraft:rotten_flesh"
+  ]
+ },
+ "minecraft:saddle": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:saddle"
+  ]
+ },
+ "minecraft:salmon": {
+  "first_tu": 71,
+  "forms": [
+   "minecraft:salmon"
+  ]
+ },
+ "minecraft:sand": {
+  "first_tu": 46,
+  "forms": [
+   "minecraft:sand"
+  ]
+ },
+ "minecraft:sapling": {
+  "first_tu": 57,
+  "forms": [
+   "minecraft:sapling"
+  ]
+ },
+ "minecraft:shears": {
+  "first_tu": 47,
+  "forms": [
+   "minecraft:shears"
+  ]
+ },
+ "minecraft:sheep": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:sheep"
+  ]
+ },
+ "minecraft:shulker": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:shulker"
+  ]
+ },
+ "minecraft:sign": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:sign"
+  ]
+ },
+ "minecraft:silverfish": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:silverfish"
+  ]
+ },
+ "minecraft:skeleton": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:skeleton"
+  ]
+ },
+ "minecraft:skull": {
+  "first_tu": 57,
+  "forms": [
+   "minecraft:skull"
+  ]
+ },
+ "minecraft:spider": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:spider"
+  ]
+ },
+ "minecraft:splash_potion": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:splash_potion"
+  ]
+ },
+ "minecraft:squid": {
+  "first_tu": 55,
+  "forms": [
+   "minecraft:squid"
+  ]
+ },
+ "minecraft:string": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:string"
+  ]
+ },
+ "minecraft:torch": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:torch"
+  ]
+ },
+ "minecraft:tropicalfish": {
+  "first_tu": 70,
+  "forms": [
+   "minecraft:tropicalfish"
+  ]
+ },
+ "minecraft:turtle": {
+  "first_tu": 70,
+  "forms": [
+   "minecraft:turtle"
+  ]
+ },
+ "minecraft:villager": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:villager"
+  ]
+ },
+ "minecraft:waterlily": {
+  "first_tu": 71,
+  "forms": [
+   "minecraft:waterlily"
+  ]
+ },
+ "minecraft:wheat": {
+  "first_tu": 31,
+  "forms": [
+   "minecraft:wheat"
+  ]
+ },
+ "minecraft:wheat_seeds": {
+  "first_tu": 32,
+  "forms": [
+   "minecraft:wheat_seeds"
+  ]
+ },
+ "minecraft:witch": {
+  "first_tu": 66,
+  "forms": [
+   "minecraft:witch"
+  ]
+ },
+ "minecraft:wolf": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:wolf"
+  ]
+ },
+ "minecraft:wool": {
+  "first_tu": 37,
+  "forms": [
+   "minecraft:wool"
+  ]
+ },
+ "minecraft:yellow_flower": {
+  "first_tu": 37,
+  "forms": [
+   "minecraft:yellow_flower"
+  ]
+ },
+ "minecraft:zombie": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:zombie"
+  ]
+ },
+ "minecraft:zombie_villager": {
+  "first_tu": 54,
+  "forms": [
+   "minecraft:zombie_villager"
+  ]
+ }
+}
