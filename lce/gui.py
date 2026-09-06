@@ -382,7 +382,7 @@ class Studio(tk.Tk):
         wc = ttk.Frame(self.ov_welcome)
         wc.place(relx=0.5, rely=0.44, anchor="center")
         ttk.Label(wc, text="Welcome to LCEStudio", style="H1.TLabel", anchor="center").pack()
-        ttk.Label(wc, text="Built by Logan Greer & Hijack Assassain", style="Muted.TLabel",
+        ttk.Label(wc, text="Built by Logan Greer & Hijack Assassin", style="Muted.TLabel",
                   anchor="center").pack(pady=(2, 0))
         ttk.Label(wc, style="Muted.TLabel", anchor="center", justify="center",
                   text="Edit and convert Minecraft: Xbox 360 (Legacy Console) worlds.").pack(
