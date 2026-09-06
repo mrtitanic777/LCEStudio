@@ -15,7 +15,7 @@ from . import nbt as N
 from . import names as NM
 
 _NUM = (N.BYTE, N.SHORT, N.INT, N.LONG, N.FLOAT, N.DOUBLE)
-_RGX = re.compile(r"^(DIM-1|DIM1)?r\.(-?\d+)\.(-?\d+)\.mcr$")
+_RGX = re.compile(r"^(DIM-1|DIM1/)?r\.(-?\d+)\.(-?\d+)\.mcr$")   # End keys are "DIM1/r.X.Z.mcr"
 _DIM = {"": "Overworld", "DIM-1": "Nether", "DIM1": "End"}
 
 
@@ -100,7 +100,7 @@ def _iter_chunks(world, log=None):
         m = _RGX.match(name)
         if not m:
             continue
-        dim = _DIM.get(m.group(1) or "", "Overworld")
+        dim = _DIM.get((m.group(1) or "").rstrip("/"), "Overworld")
         rx, rz = int(m.group(2)), int(m.group(3))
         try:
             reg = Region(world, name)

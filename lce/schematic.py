@@ -251,27 +251,33 @@ def cells_to_arrays(world, cells):
     return blocks, data, (x0, y0, z0)
 
 
-def stamp(world, blocks, data, ox, oy, oz, skip_air=True):
+def stamp(world, blocks, data, ox, oy, oz, skip_air=True, height=CHUNK_Y):
     """Write a schematic into a World at origin (ox,oy,oz). Returns (n_written,
     dirty_chunks). skip_air leaves existing blocks where the schematic is air.
-    Ground check: the origin is lowered so the whole build fits under the 128-tall
-    ceiling (and not below y=0) — so nothing gets clipped when it fits at all."""
+    Ground check: the origin is lowered so the whole build fits under the world's
+    `height` ceiling (and not below y=0) — so nothing gets clipped when it fits at
+    all. `height` MUST match the target world: 256 for a view3d World, 128 for the
+    128-tall old-NBT `lce.World` (writing y>=128 there corrupts lower blocks or
+    raises IndexError), so callers of the latter must pass height=128."""
     W, H, L = blocks.shape
-    if oy + H > CHUNK_Y:                     # would poke through the ceiling -> drop it down
-        oy = CHUNK_Y - H
-    oy = max(0, oy)                          # (if H>128 it can't fully fit; bottom-aligned)
+    if oy + H > height:                      # would poke through the ceiling -> drop it down
+        oy = height - H
+    oy = max(0, oy)                          # (if H>height it can't fully fit; bottom-aligned)
     n = 0
     dirty = set()
     for xi in range(W):
         for yi in range(H):
             y = oy + yi
-            if not (0 <= y < CHUNK_Y):
+            if not (0 <= y < height):
                 continue
             for zi in range(L):
                 bid = int(blocks[xi, yi, zi])
                 if skip_air and bid == 0:
                     continue
-                ch = world.set_block(ox + xi, y, oz + zi, bid, int(data[xi, yi, zi]))
+                try:
+                    ch = world.set_block(ox + xi, y, oz + zi, bid, int(data[xi, yi, zi]))
+                except IndexError:           # y past this world's real ceiling -> skip, never crash
+                    ch = None
                 if ch is not None:
                     dirty.add(ch); n += 1
     return n, dirty

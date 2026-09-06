@@ -3448,7 +3448,7 @@ class Studio(tk.Tk):
 
         def work():
             b, d = gen_fn()
-            n, _ = S.stamp(self.world, b, d, ox, oy, oz)
+            n, _ = S.stamp(self.world, b, d, ox, oy, oz, height=128)   # lce.World is 128-tall
             self.world.save(backup=True, progress=self._progress)
             return n
         self._run_async(work, on_done=lambda n: (self._reload_after_edit(),

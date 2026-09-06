@@ -44,8 +44,16 @@ def load(save_path):
 
 
 def store(save_path, waypoints):
+    # Write to a temp file then atomically replace, so a failure mid-write can never
+    # truncate/corrupt an existing waypoints file (the "w" mode would empty it first).
+    dst = _path(save_path)
+    tmp = dst + ".tmp"
     try:
-        with open(_path(save_path), "w", encoding="utf-8") as f:
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"source": str(save_path), "waypoints": waypoints}, f, indent=2)
+        os.replace(tmp, dst)
     except Exception:
-        pass
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass

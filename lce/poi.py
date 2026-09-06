@@ -65,12 +65,17 @@ def find_pois(world, log=None):
     spawners, chests, signs, portals, endframes = [], [], [], [], []
     build_chunks = {}                                    # (gx,gz,dim) -> (count, top-y, dominant id)
 
+    from .world import Region
     for name in [n for n in world._filedata if n.endswith(".mcr")]:
         base = name[:-4].split("/")[-1].split(".")
-        rx, rz = int(base[1]), int(base[2]); nether = name.startswith("DIM-1")
-        dim = -1 if nether else 0
-        reg = world.region(rx, rz, nether)
-        reg.decode_all()
+        rx, rz = int(base[1]), int(base[2])
+        # keys: overworld "r.X.Z.mcr", nether "DIM-1r.X.Z.mcr", END "DIM1/r.X.Z.mcr"
+        dim = -1 if name.startswith("DIM-1") else (1 if name.startswith("DIM1/") else 0)
+        try:
+            reg = Region(world, name)        # by exact key -> the End is addressed correctly
+            reg.decode_all()
+        except Exception:
+            continue
         for (lcx, lcz), ch in reg.chunks.items():
             gx, gz = rx * 32 * 16 + lcx * 16, rz * 32 * 16 + lcz * 16
             te = ch.tile_entities
