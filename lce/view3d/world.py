@@ -84,9 +84,10 @@ class _NBT:
                 items.append((iid, cnt))
         return items
 
-    def _read_ent_list(self, listname, out, cont):
+    def _read_ent_list(self, listname, out, cont, signs=None):
         """A TAG_List of entity/tile-entity compounds -> append (kind, name, x, y, z)
-        to `out`; containers with an Items list -> (name, x, y, z, items) to `cont`."""
+        to `out`; containers with an Items list -> (name, x, y, z, items) to `cont`;
+        signs -> (x+.5, y+.5, z+.5, [line1..4]) to `signs`."""
         et = self.u1(); count = self.i4()
         if et != 10:                                  # not a list of compounds
             for _ in range(count):
@@ -94,7 +95,7 @@ class _NBT:
             return
         kind = "tile" if listname == "TileEntities" else "mob"
         for _ in range(count):
-            eid = None; pos = None; ix = iy = iz = None; items = None
+            eid = None; pos = None; ix = iy = iz = None; items = None; texts = {}
             while True:
                 t = self.u1()
                 if t == 0:
@@ -102,6 +103,8 @@ class _NBT:
                 nm = self.name()
                 if t == 8 and nm == "id":
                     n = self.u2(); eid = self.d[self.o:self.o + n].decode("latin1", "ignore"); self.o += n
+                elif t == 8 and nm in ("Text1", "Text2", "Text3", "Text4"):
+                    n = self.u2(); texts[nm] = self.d[self.o:self.o + n].decode("utf-8", "ignore"); self.o += n
                 elif t == 9 and nm == "Pos":
                     pet = self.u1(); pn = self.i4(); vals = []
                     for _ in range(pn):
@@ -126,8 +129,13 @@ class _NBT:
                 out.append((kind, eid or "?", ix + 0.5, iy + 0.5, iz + 0.5))
             if items and ix is not None:
                 cont.append((eid or "?", ix, iy, iz, items))
+            if (signs is not None and texts and ix is not None
+                    and (eid or "").lower().endswith("sign")):
+                lines = [_sign_line(texts.get("Text%d" % k, "")) for k in (1, 2, 3, 4)]
+                if any(s.strip() for s in lines):
+                    signs.append((ix + 0.5, iy + 0.5, iz + 0.5, lines))
 
-    def scan_entities(self, out, cont):
+    def scan_entities(self, out, cont, signs=None):
         """Scan a (Level or root) compound for Entities / TileEntities lists,
         descending into a nested Level compound. Reader must sit just past the
         root compound's tag+name."""
@@ -137,9 +145,9 @@ class _NBT:
                 return out
             nm = self.name()
             if t == 10 and nm == "Level":
-                self.scan_entities(out, cont)         # descend, then continue the parent
+                self.scan_entities(out, cont, signs)  # descend, then continue the parent
             elif t == 9 and nm in ("Entities", "TileEntities"):
-                self._read_ent_list(nm, out, cont)
+                self._read_ent_list(nm, out, cont, signs)
             else:
                 self.skip(t)
 
@@ -196,22 +204,52 @@ def _aquatic_entity_nbt(raw):
         i = p + 1
 
 
+def _json_text(v):
+    """Flatten a Minecraft JSON text component to its plain string."""
+    if isinstance(v, str):
+        return v
+    if isinstance(v, dict):
+        s = str(v.get("text", ""))
+        for e in (v.get("extra") or []):
+            s += _json_text(e)
+        return s
+    if isinstance(v, list):
+        return "".join(_json_text(e) for e in v)
+    return ""
+
+
+def _sign_line(s):
+    """One sign line as plain text. LCE stores each line either as raw text or as a
+    JSON text component ('{\"text\":\"…\"}' or a quoted JSON string); handle both."""
+    s = (s or "").strip()
+    if not s:
+        return ""
+    if s[0] in "{[" or (s[0] == '"' and s[-1] == '"'):
+        try:
+            import json
+            return _json_text(json.loads(s))
+        except Exception:
+            pass
+    return s
+
+
 def extract_entities(nbt_bytes):
-    """Return (entities, containers): entities = [(kind, name, x, y, z)]; containers =
-    [(name, x, y, z, [(item_id, count), ...])] for chests/dispensers/furnaces. Works on
-    a full old-NBT chunk and a format-12 entity blob. Never raises."""
+    """Return (entities, containers, signs): entities = [(kind, name, x, y, z)];
+    containers = [(name, x, y, z, [(item_id, count), ...])] for chests/dispensers/
+    furnaces; signs = [(x, y, z, [line1..4])]. Works on a full old-NBT chunk and a
+    format-12 entity blob. Never raises."""
     if not nbt_bytes:
-        return [], []
+        return [], [], []
     r = _NBT(nbt_bytes)
-    out, cont = [], []
+    out, cont, signs = [], [], []
     try:
         t = r.u1(); r.name()                  # root compound
         if t != 10:
-            return [], []
-        r.scan_entities(out, cont)
+            return [], [], []
+        r.scan_entities(out, cont, signs)
     except Exception:
         pass
-    return out, cont
+    return out, cont, signs
 
 
 class World:
@@ -220,6 +258,7 @@ class World:
         self.data = {}                        # (cx, cz) -> np.uint8 [16,16,256] metadata (0..15)
         self.entities = []                    # [(kind, name, x, y, z)] mobs/items + tile-entities
         self.containers = []                  # [(name, x, y, z, [(item_id, count)])] chest/furnace loot
+        self.signs = []                       # [(x, y, z, [line1..4])] sign text for the 3D viewer
         self.spawn = (0, 72, 0)
         self.player_pos = None                # (x, y, z) of the owner's last position
         self.name = "world"
@@ -372,7 +411,8 @@ class World:
             if len(da) >= sb:                             # upper-section metadata
                 dz[:, :, SRC_SECTION:2 * SRC_SECTION] = _unpack(da[sb // 2:sb])
             self.data[(gx, gz)] = dz
-        e, c = extract_entities(nbt_bytes); self.entities.extend(e); self.containers.extend(c)
+        e, c, s = extract_entities(nbt_bytes)
+        self.entities.extend(e); self.containers.extend(c); self.signs.extend(s)
         return True
 
     def _store_aquatic(self, gx, gz, nbt_bytes):
@@ -390,7 +430,8 @@ class World:
         ids = np.where(ids > 255, 0, ids).astype(np.uint8)
         self.chunks[(gx, gz)] = np.ascontiguousarray(ids.transpose(0, 2, 1))   # -> [x, z, y]
         self.data[(gx, gz)] = np.ascontiguousarray(md.transpose(0, 2, 1).astype(np.uint8))
-        e, c = extract_entities(_aquatic_entity_nbt(nbt_bytes)); self.entities.extend(e); self.containers.extend(c)
+        e, c, s = extract_entities(_aquatic_entity_nbt(nbt_bytes))
+        self.entities.extend(e); self.containers.extend(c); self.signs.extend(s)
         return True
 
 

@@ -26,7 +26,8 @@ Controls
     Wand select J           -> auto-select the whole built structure you're aiming at
     Schematic   Ctrl+E export the selection to a .schematic · Ctrl+I import one at aim
     Find block  F           -> highlight every nearby copy of the block in your hand
-    Entities    M           -> markers on mobs (red) + chests/spawners/signs (cyan)
+    Entities    M           -> markers on mobs (red) + chests/spawners/signs (cyan),
+                               and every sign's text (nearby sign text always shows)
     Lighting    B           -> cycle normal / fullbright / night
     Chunk grid  G           -> toggle chunk-border overlay
     Render dist [  /  ]      -> fewer / more chunks
@@ -373,6 +374,11 @@ class Editor(pyglet.window.Window):
                                    batch=self.ui, group=self.ui_txt),
                        S.Rectangle(cx - 1, cy - 9, 2, 18, color=(255, 255, 255, 200),
                                    batch=self.ui, group=self.ui_txt)]
+        # sign text — a pooled set of world-anchored labels (screen-projected each frame)
+        self._sign_batch = pyglet.graphics.Batch()
+        self._sign_bg_grp = pyglet.graphics.Group(order=0)
+        self._sign_txt_grp = pyglet.graphics.Group(order=1)
+        self._sign_pool = []                       # [{'bg': Rectangle, 'lbl': Label}]
         # toast (save banner) — its own batch so we can show/hide cleanly
         self.toast_batch = pyglet.graphics.Batch()
         self._toast_bg = S.Rectangle(0, self.height - 96, self.width, 44, color=(20, 120, 55, 0),
@@ -1136,6 +1142,78 @@ class Editor(pyglet.window.Window):
         proj = Mat4.perspective_projection(self.width / max(1, self.height), 0.1, 1600.0, fov=70)
         return proj @ _look_at(self.pos, self._forward())
 
+    def _project(self, x, y, z, mvp):
+        """World point -> (screen_x, screen_y, clip_w). clip_w<=0 means behind camera.
+        mvp is a pyglet Mat4 (column-major 16-float tuple)."""
+        m = mvp
+        cx = m[0] * x + m[4] * y + m[8] * z + m[12]
+        cy = m[1] * x + m[5] * y + m[9] * z + m[13]
+        cw = m[3] * x + m[7] * y + m[11] * z + m[15]
+        if cw <= 1e-4:
+            return None
+        sx = (cx / cw * 0.5 + 0.5) * self.width
+        sy = (cy / cw * 0.5 + 0.5) * self.height
+        return sx, sy, cw
+
+    def _ensure_sign_pool(self, n):
+        import pyglet.shapes as S
+        while len(self._sign_pool) < n:
+            lbl = pyglet.text.Label("", font_size=10, multiline=True, width=260,
+                                    anchor_x="center", anchor_y="center", align="center",
+                                    color=(245, 246, 250, 255),
+                                    batch=self._sign_batch, group=self._sign_txt_grp)
+            bg = S.BorderedRectangle(0, 0, 10, 10, border=1, color=(16, 18, 24, 210),
+                                     border_color=(120, 140, 175, 210),
+                                     batch=self._sign_batch, group=self._sign_bg_grp)
+            bg.anchor_position = (0, 0)
+            self._sign_pool.append({"bg": bg, "lbl": lbl})
+
+    def _draw_sign_text(self, mvp):
+        """Render each in-range sign's text as a screen-space label anchored over the
+        sign. Always shows signs within reading distance; the M-markers toggle extends
+        it to every sign in the render distance."""
+        signs = getattr(self.world, "signs", None)
+        if not signs:
+            return
+        far = self.render_dist * CHUNK_X
+        limit = far if self.show_entities else 14.0        # blocks
+        px, py, pz = self.pos
+        cand = []
+        for (x, y, z, lines) in signs:
+            dx, dz = x - px, z - pz
+            d2 = dx * dx + (y - py) ** 2 + dz * dz
+            if d2 > limit * limit:
+                continue
+            scr = self._project(x, y + 0.9, z, mvp)
+            if scr is None:
+                continue
+            sx, sy, _w = scr
+            if sx < -40 or sx > self.width + 40 or sy < -20 or sy > self.height + 20:
+                continue
+            cand.append((d2, sx, sy, lines))
+        cand.sort(reverse=True)                            # far first, so near signs draw on top
+        cand = cand[-48:]                                  # cap the number of labels
+        self._ensure_sign_pool(len(cand))
+        for slot in self._sign_pool:                       # hide the whole pool first
+            slot["lbl"].text = ""
+            slot["bg"].visible = False
+        for slot, (d2, sx, sy, lines) in zip(self._sign_pool, cand):
+            lbl = slot["lbl"]; bg = slot["bg"]
+            lbl.text = "\n".join(lines).rstrip("\n") or " "
+            lbl.x = int(sx); lbl.y = int(sy)
+            fade = 1.0 if not self.show_entities else max(0.35, 1.0 - (d2 ** 0.5) / (far + 1))
+            a = int(255 * fade)
+            lbl.color = (245, 246, 250, a)
+            cw = min(300, max(30, lbl.content_width + 12))
+            ch = lbl.content_height + 8
+            bg.width = cw; bg.height = ch
+            bg.x = int(sx - cw / 2); bg.y = int(sy - ch / 2)
+            bg.color = (16, 18, 24, int(200 * fade))
+            bg.border_color = (120, 140, 175, int(200 * fade))
+            bg.visible = True
+        glDisable(GL_DEPTH_TEST)
+        self._sign_batch.draw()
+
     def on_draw(self):
         if self.loading:
             self._draw_load_screen()
@@ -1190,6 +1268,9 @@ class Editor(pyglet.window.Window):
         if self.palette_open:
             self._draw_palette()
 
+        if not self.palette_open:
+            self._draw_sign_text(mvp)          # world-anchored sign text (screen-projected)
+
         self._draw_hud()
 
     def _draw_hud(self):
@@ -1213,7 +1294,8 @@ class Editor(pyglet.window.Window):
             "WASD+Space/Ctrl move · Shift fast · wheel speed · L place · R break · drag box · MID pick · "
             "E atlas · 1-9 hotbar · Ctrl+S save · Esc cursor · Alt+F4 quit\n"
             "Home spawn · P player · T go-to · [ ] render dist · B light · G grid · "
-            "J wand · K box · Ctrl+C/V copy·paste · Ctrl+E/I schematic · Ctrl+Z/Y undo · F find · M mobs")
+            "J wand · K box · Ctrl+C/V copy·paste · Ctrl+E/I schematic · Ctrl+Z/Y undo · F find · "
+            "M mobs+all signs (signs read up close always)")
         # flash / coord-entry line
         if self.typing is not None:
             txt = "  go to X Y Z:  %s_" % self.typing; show = True; col = (150, 220, 255, 255)
