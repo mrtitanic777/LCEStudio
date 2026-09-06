@@ -1,8 +1,17 @@
 # LCE Studio
 
+[![Latest release](https://img.shields.io/github/v/release/mrtitanic777/LCEStudio?sort=semver&label=release)](https://github.com/mrtitanic777/LCEStudio/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mrtitanic777/LCEStudio/total)](https://github.com/mrtitanic777/LCEStudio/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2064--bit-informational)](https://github.com/mrtitanic777/LCEStudio/releases/latest)
+
 A complete toolkit for **Minecraft: Xbox 360 / Legacy Console Edition (LCE)** save games —
 browse, edit, visualize, convert and write LCE saves, and write them back **console-exact**
 so they load in-game without freezing.
+
+> ### ⬇ [Download LCEStudio.exe](https://github.com/mrtitanic777/LCEStudio/releases/latest/download/LCEStudio.exe)
+> A single ready-to-run executable — no Python or install needed (Windows 64-bit). Or browse all
+> [Releases](https://github.com/mrtitanic777/LCEStudio/releases).
 
 It reads **every LCE chunk format** (old-NBT 128/256-tall, tile-storage v8–v11, and the
 Aquatic sectioned v12), so it opens worlds from **TU0 through TU75**, and it can convert them
@@ -36,8 +45,10 @@ use bundled DLLs.
 
 ## Run it
 
-**Standalone (no Python needed)** — run **`LCEStudio.exe`**. A single portable executable with
-everything bundled (engine, 2D/3D renderers, converter engine + DLLs, `lzxc.exe`, textures).
+**Standalone (no Python needed)** — download **[`LCEStudio.exe`](https://github.com/mrtitanic777/LCEStudio/releases/latest/download/LCEStudio.exe)**
+from the [latest release](https://github.com/mrtitanic777/LCEStudio/releases/latest) and run it. A
+single portable executable with everything bundled (engine, 2D/3D renderers, converter engine +
+DLLs, `lzxc.exe`, textures).
 Rebuild it any time with `build_exe.bat` (needs `pyinstaller`), or:
 ```
 python -m PyInstaller --noconfirm LCEStudio.spec
