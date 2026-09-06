@@ -9,9 +9,9 @@ A complete toolkit for **Minecraft: Xbox 360 / Legacy Console Edition (LCE)** sa
 browse, edit, visualize, convert and write LCE saves, and write them back **console-exact**
 so they load in-game without freezing.
 
-> ### ⬇ [Download LCEStudio.exe](https://github.com/mrtitanic777/LCEStudio/releases/latest/download/LCEStudio.exe)
-> A single ready-to-run executable — no Python or install needed (Windows 64-bit). Or browse all
-> [Releases](https://github.com/mrtitanic777/LCEStudio/releases).
+![LCE Studio — the World Library gallery](docs/screenshot-library.png)
+
+*The World Library — every world in your saves folders, with thumbnails, search and detail-on-hover, ready to open, convert or repair.*
 
 It reads **every LCE chunk format** (old-NBT 128/256-tall, tile-storage v8–v11, and the
 Aquatic sectioned v12), so it opens worlds from **TU0 through TU75**, and it can convert them
