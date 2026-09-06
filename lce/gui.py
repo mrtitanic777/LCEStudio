@@ -485,6 +485,7 @@ class Studio(tk.Tk):
         ttk.Button(ctl, text="🔍 Find structures", style="Accent.TButton",
                    command=self.on_find_pois).pack(side="left")
         ttk.Button(ctl, text="📐 3D portrait", command=self.on_export_iso).pack(side="left", padx=(4, 0))
+        ttk.Button(ctl, text="🎞 Timelapse", command=self.tool_timelapse).pack(side="left", padx=(4, 0))
         self.map_read = tk.StringVar(value="click the map to inspect  ·  double-click to edit that block")
         ttk.Label(ctl, textvariable=self.map_read).pack(side="left", padx=10)
 
@@ -2738,10 +2739,129 @@ class Studio(tk.Tk):
         w = self.world
         self._run_async(
             lambda: w.save(backup=True, progress=self._progress),   # compressor self-verifies
-            on_done=lambda out: (self.status.set("Saved (backup .bak): %s" % out),
+            on_done=lambda out: (self._tl_snapshot(out),
+                                 self.status.set("Saved (backup .bak): %s" % out),
                                  messagebox.showinfo("Saved", "Wrote %s\n"
                                                      "(original backed up as .bak)" % out)),
             msg="Saving — encoding chunks…")
+
+    def _tl_snapshot(self, path):
+        """Capture a timelapse snapshot after a save (best-effort, never blocks a save)."""
+        try:
+            from . import timelapse as TL
+            TL.snapshot(path)
+        except Exception:
+            pass
+
+    # -- World Timelapse window --
+    def tool_timelapse(self):
+        if not self.path:
+            messagebox.showinfo("Timelapse", "Open a save first. A snapshot is captured every time you "
+                                "save, so a scrubable history builds up as you work."); return
+        from . import timelapse as TL
+        if not TL.can_snapshot(self.path):
+            messagebox.showinfo("Timelapse", "This save has no plain savegame.dat (it was opened from a "
+                                "CON package). Save it into a folder first to build a timelapse."); return
+        snaps = TL.list_snapshots(self.path)
+        if not snaps:
+            if not messagebox.askyesno("Timelapse", "No history yet for this world.\n\nCapture the "
+                                       "current state as the first snapshot? (One is also taken every "
+                                       "time you save.)"):
+                return
+            TL.snapshot(self.path); snaps = TL.list_snapshots(self.path)
+        self._tl_snaps = snaps
+        self._tl_photos = {}; self._tl_render_pending = set(); self._tl_playing = False
+        win = tk.Toplevel(self); self._tl_win = win
+        win.title("World Timelapse — %s" % os.path.basename(str(self.path).rstrip("/\\")))
+        win.configure(background=self.THEMES[self.theme]["BG"]); win.geometry("560x580")
+        body = ttk.Frame(win, padding=12); body.pack(fill="both", expand=True)
+        self._tl_img_lbl = ttk.Label(body, anchor="center", background=self.THEMES[self.theme]["CANVAS"])
+        self._tl_img_lbl.pack(fill="both", expand=True)
+        self._tl_ts = tk.StringVar()
+        ttk.Label(body, textvariable=self._tl_ts, style="Muted.TLabel").pack(pady=(8, 0))
+        self._tl_scale = ttk.Scale(body, from_=0, to=len(snaps) - 1, orient="horizontal",
+                                   command=lambda v: self._tl_show(round(float(v))))
+        self._tl_scale.pack(fill="x", pady=(8, 4))
+        bar = ttk.Frame(body); bar.pack(fill="x", pady=(6, 0))
+        self._tl_playbtn = ttk.Button(bar, text="▶ Play", command=self._tl_toggle_play)
+        self._tl_playbtn.pack(side="left")
+        ttk.Button(bar, text="⟳ Snapshot now", command=self._tl_snap_now).pack(side="left", padx=6)
+        ttk.Button(bar, text="↩ Restore this version", style="Accent.TButton",
+                   command=self._tl_restore).pack(side="left", padx=6)
+        ttk.Button(bar, text="Close", command=win.destroy).pack(side="right")
+        self._tl_scale.set(len(snaps) - 1); self._tl_show(len(snaps) - 1)
+
+    def _tl_show(self, index):
+        from . import timelapse as TL
+        import time as _t
+        snaps = getattr(self, "_tl_snaps", [])
+        if not snaps or not self._tl_win.winfo_exists():
+            return
+        index = max(0, min(len(snaps) - 1, index))
+        s = snaps[index]
+        self._tl_ts.set("Snapshot %d of %d   ·   %s" % (index + 1, len(snaps),
+                        _t.strftime("%d %b %Y  %H:%M:%S", _t.localtime(s["time"]))))
+        if index in self._tl_photos:
+            self._tl_img_lbl.configure(image=self._tl_photos[index], text=""); return
+        self._tl_img_lbl.configure(image="", text="rendering…")
+        if index in self._tl_render_pending:
+            return
+        self._tl_render_pending.add(index)
+
+        def worker():
+            try:
+                png = TL.frame(self.path, s["index"], tile=8)
+                self._post(lambda: self._tl_frame_ready(index, png))
+            except Exception:
+                self._post(lambda: self._tl_render_pending.discard(index))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _tl_frame_ready(self, index, png):
+        self._tl_render_pending.discard(index)
+        if not png or not _HAVE_PIL or not self._tl_win.winfo_exists():
+            return
+        from PIL import Image
+        im = Image.open(png).convert("RGB"); im.thumbnail((520, 450))
+        ph = ImageTk.PhotoImage(im); self._tl_photos[index] = ph
+        if round(float(self._tl_scale.get())) == index:
+            self._tl_img_lbl.configure(image=ph, text="")
+
+    def _tl_toggle_play(self):
+        self._tl_playing = not self._tl_playing
+        self._tl_playbtn.configure(text="⏸ Pause" if self._tl_playing else "▶ Play")
+        if self._tl_playing:
+            self._tl_advance()
+
+    def _tl_advance(self):
+        if not self._tl_playing or not self._tl_win.winfo_exists():
+            self._tl_playing = False; return
+        i = round(float(self._tl_scale.get()))
+        i = 0 if i + 1 >= len(self._tl_snaps) else i + 1
+        self._tl_scale.set(i); self._tl_show(i)
+        self._tl_win.after(750, self._tl_advance)
+
+    def _tl_snap_now(self):
+        from . import timelapse as TL
+        TL.snapshot(self.path)
+        self._tl_snaps = TL.list_snapshots(self.path)
+        self._tl_scale.configure(to=len(self._tl_snaps) - 1)
+        self._tl_scale.set(len(self._tl_snaps) - 1); self._tl_show(len(self._tl_snaps) - 1)
+
+    def _tl_restore(self):
+        from . import timelapse as TL
+        i = round(float(self._tl_scale.get()))
+        if not messagebox.askyesno("Restore version",
+                                   "Roll this world back to snapshot %d of %d?\n\nThe current save is "
+                                   "backed up (.bak) and replaced with this older version." % (i + 1, len(self._tl_snaps)),
+                                   parent=self._tl_win):
+            return
+        try:
+            TL.restore(self.path, self._tl_snaps[i]["index"])
+        except Exception as e:
+            self._err(e); return
+        self._tl_win.destroy()
+        self.load(self.path)                            # reopen the restored save
+        messagebox.showinfo("Restored", "Rolled the world back to snapshot %d (a .bak was kept)." % (i + 1))
 
     def on_save_as(self):
         if not self._guard():
