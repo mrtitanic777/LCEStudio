@@ -799,8 +799,20 @@ def encode_v12_chunk(ch: dict) -> bytes:
     out += struct.pack('>i', ch['z'])
     out += struct.pack('>q', ch.get('last_update', 0))
     out += struct.pack('>q', ch.get('inhabited', 0))
-    out += bytes([(pool >> 16) & 0xFF, (pool >> 8) & 0xFF, pool & 0xFF])
-    out += bytes(ch.get('header_extra') or b'').ljust(31, b'\x00')[:31]
+    # Game v12 header layout (0x1a..0x3b): sectionSizeUnits (u16) + a JUMP table of
+    # each section's byte offset into the pool (16 * u16), then the 16 section sizes.
+    # The game and LCEStudio's format12 reader locate each section from this jump
+    # table; the old code wrote a 3-byte pool size + 31 "unknown" bytes here and NO
+    # jump table, producing v12 chunks the game/viewer could not parse (they read the
+    # jump slot as garbage and landed on the wrong section). format12 decodes every
+    # real game save with the jump layout, so that is the authoritative format.
+    out += struct.pack('>H', pool // 256)
+    _acc = 0
+    _jump = []
+    for _s in range(16):
+        _jump.append(_acc & 0xFFFF)
+        _acc += sizes[_s] * 256
+    out += struct.pack('>16H', *_jump)
     out += bytes(sizes)
     if len(out) != V12_HEADER:
         raise CannotEncode(f"v12 header came out {len(out)} bytes, not "
