@@ -2227,7 +2227,15 @@ class Studio(tk.Tk):
         ttk.Label(jr, text="From", style="Muted.TLabel", width=9).pack(side="left")
         ttk.Combobox(jr, textvariable=self.xj_plat, values=plats, state="readonly", width=13).pack(side="left")
         ttk.Label(jr, text="auto", style="Muted.TLabel").pack(side="left", padx=(6, 0))
+        ttk.Label(jr, text="To  Java", style="Muted.TLabel").pack(side="left", padx=(16, 4))
+        self.xj_ver = tk.StringVar(value=self._JAVA_AUTO)
+        ttk.Combobox(jr, textvariable=self.xj_ver, values=[self._JAVA_AUTO] + self._java_versions(),
+                     state="readonly", width=13).pack(side="left")
         self.xj_src.trace_add("write", lambda *a: self._autoplat(self.xj_src, self.xj_plat))
+        ttk.Label(pad, text="\u201cAuto\u201d picks the closest Java version to the world\u2019s title update. "
+                            "Output uses numeric block ids (Java 1.2\u20131.12); pick an exact version to "
+                            "open it in that game.", style="Muted.TLabel", wraplength=680,
+                  justify="left").pack(anchor="w", pady=(1, 0))
         self._conv_outrow(pad, self.xj_out)
         ttk.Button(pad, text="Export to Java  \u2192", style="Accent.TButton",
                    command=self.on_x_java).pack(anchor="w", pady=(8, 0))
@@ -2414,15 +2422,34 @@ class Studio(tk.Tk):
         self._run_async(work, on_done=self._conv_done("Converted to TU%d" % tu),
                         msg="Converting title update\u2026")
 
+    _JAVA_AUTO = "Auto (from TU)"
+
+    def _java_versions(self):
+        """The Java Editions this converter can actually WRITE \u2014 Anvil, numeric-id
+        (1.2.4 through the last pre-flattening version, 1.12.2). Derived from the engine
+        table so it stays authoritative."""
+        try:
+            from .converter import lce_java as J
+            order = list(J.JAVA_VERSIONS)
+            lo = order.index(J.OLDEST_ANVIL_JAVA)
+            hi = max(i for i, v in enumerate(order) if not J.JAVA_VERSIONS[v][1])  # not flattened
+            return order[lo:hi + 1]
+        except Exception:
+            return ["1.2.4", "1.6.4", "1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2", "1.12.2"]
+
     def on_x_java(self):
         src = self.xj_src.get().strip() or self.path
         if not src:
             messagebox.showwarning("Convert", "Pick a console save (or open one first)."); return
         plat = self._PLATCODE.get(self.xj_plat.get(), "xbox360")
         out = self.xj_out.get().strip() or None
+        jv = self.xj_ver.get()
+        java_version = None if jv == self._JAVA_AUTO else jv
         from .converter import lce_engine as E
-        self._run_async(lambda: E.convert_lce_to_java(src, plat, out, log=self._logcb()),
-                        on_done=self._conv_done("Exported to Java"), msg="Exporting to Java\u2026")
+        self._run_async(lambda: E.convert_lce_to_java(src, plat, out, java_version=java_version,
+                                                      log=self._logcb()),
+                        on_done=self._conv_done("Exported to Java %s" % (java_version or "(auto)")),
+                        msg="Exporting to Java\u2026")
 
     def on_x_resign(self):
         src = self.xr_src.get().strip()
