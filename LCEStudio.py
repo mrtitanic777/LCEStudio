@@ -21,8 +21,19 @@ def main():
         return view_main(argv[1:])
     if argv and argv[0] == "--selftest-converter":
         # verify the vendored converter's bundled DLLs + templates resolve when frozen;
-        # the windowed exe has no console, so write the outcome to the given file
+        # the windowed exe has no console, so write the outcome to a REPORT file.
+        # SAFETY: argv[1] is the report path, and this OVERWRITES it — so refuse any
+        # target that isn't a .txt (and never one that already holds real data). This
+        # prevents pointing the self-test at a save and clobbering it.
         out = argv[1] if len(argv) > 1 else "converter_selftest.txt"
+        if not str(out).lower().endswith(".txt"):
+            sys.stderr.write("--selftest-converter writes a report; its argument must be a .txt "
+                             "path, not %r (refusing to overwrite it).\n" % out)
+            return 2
+        if os.path.exists(out) and os.path.getsize(out) > 1_000_000:
+            sys.stderr.write("--selftest-converter refuses to overwrite the large existing file "
+                             "%r.\n" % out)
+            return 2
         lines = []
         try:
             from lce.converter import lce_engine as E
