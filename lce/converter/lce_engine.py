@@ -4384,8 +4384,11 @@ def retarget_payload(payload: bytes, target_tu: int, endian: str = '>',
         _check_cancel(cancel)
         blob = payload[e['start_offset']: e['start_offset'] + e['length']]
         if not parse_region_name(e['filename']) or len(blob) < SECT:
-            if endian == '>':
-                blob = _downgrade_side_file(e['filename'], blob, target_tu)
+            # level.dat / players/*.dat are big-endian NBT on EVERY platform (only the
+            # container + region storage are little-endian on Windows LCE), so downgrade
+            # them regardless of the payload endian - else a WinLCE downgrade leaves the
+            # old version stamps/tags in place and the world's TU floor stays high.
+            blob = _downgrade_side_file(e['filename'], blob, target_tu)
             blobs.append(blob)
             continue
         out = bytearray(blob)
@@ -4505,13 +4508,14 @@ def recode_payload(payload: bytes, target_tu: int, endian: str = '>',
         if not parse_region_name(e['filename']) or len(blob) < SECT:
             # level.dat and the player have to come down too, or the game reads
             # newer version stamps and tags than itself - and regenerates the
-            # world or crashes loading the player. Console (big-endian) only.
-            if endian == '>':
-                before = len(blob)
-                blob = _downgrade_side_file(e['filename'], blob, target_tu)
-                if len(blob) != before:
-                    note(f"  {e['filename'].rstrip(chr(0)):<14}: trimmed to "
-                         f"TU{target_tu} ({before} -> {len(blob)} bytes)")
+            # world or crashes loading the player. These side files are big-endian
+            # NBT on every platform (incl. Windows LCE), so downgrade them whatever
+            # the container endian is.
+            before = len(blob)
+            blob = _downgrade_side_file(e['filename'], blob, target_tu)
+            if len(blob) != before:
+                note(f"  {e['filename'].rstrip(chr(0)):<14}: trimmed to "
+                     f"TU{target_tu} ({before} -> {len(blob)} bytes)")
             blobs.append(blob)
             continue
 
@@ -4727,26 +4731,44 @@ def convert_console_to_console(src, platform='xbox360', target_tu=19,
     def out(msg=''):
         (log or print)(msg)
 
-    payload, name, thumb = read_console_input(src, platform)
+    if platform == 'windows_lce':                 # little-endian saveData.ms source
+        ms = find_win64_save(src)
+        payload, endian = read_savedata_ms(ms), '<'
+        name = read_worldname_txt(Path(ms).parent) or Path(ms).parent.name
+        thumb = find_thumbnail(Path(ms).parent)
+    else:
+        payload, name, thumb = read_console_input(src, platform)
+        endian = '>'
     if world_name:
         name = world_name
     name = (name or '').strip() or 'MinecraftSave'
 
-    info = describe_world(payload, '>', platform=platform)
+    info = describe_world(payload, endian, platform=platform)
     out(f"  World         : {name}")
     out(f"  Now           : save version {info['save_version']}, "
         f"{info['chunk_format']}")
     out(f"Retargeting to TU{target_tu} ...")
 
-    new_payload = retarget_payload(payload, target_tu, endian='>',
+    new_payload = retarget_payload(payload, target_tu, endian=endian,
                                    verify=verify, log=out, translate=translate,
                                    cancel=cancel)
 
-    savegame = build_savegame_dat(new_payload, verify=verify)
-    if emulator:
+    if platform == 'windows_lce':
+        # A Windows-LCE TU change stays Windows LCE: write the little-endian payload
+        # back as a native Win64 world folder (saveData.ms + thumbnail).
+        dst = Path(out_path) if out_path else OUTPUT_DIR / sanitise(name)
+        dst.mkdir(parents=True, exist_ok=True)
+        (dst / 'saveData.ms').write_bytes(write_savedata_ms(new_payload))
+        out("  saveData.ms  [ok]")
+        thumb_path = dst / WIN64_THUMB_REL
+        thumb_path.parent.mkdir(parents=True, exist_ok=True)
+        thumb_path.write_bytes(thumb or _placeholder_png())
+        out(f"  {WIN64_THUMB_REL.as_posix()}  [ok]")
+    elif emulator:
         # The container the world lands in, then a clean, unique folder name
         # inside it - never the raw display name, which may carry spaces or
         # parentheses an older title update crashes on at world-select.
+        savegame = build_savegame_dat(new_payload, verify=verify)
         container = Path(out_path).parent if out_path else OUTPUT_DIR
         container.mkdir(parents=True, exist_ok=True)
         dst = container / unique_world_folder(container, name)
@@ -4761,6 +4783,7 @@ def convert_console_to_console(src, platform='xbox360', target_tu=19,
         except Exception as exc:
             out(f"  {SAVEINFO_NAME}  [skipped: {type(exc).__name__}]")
     else:
+        savegame = build_savegame_dat(new_payload, verify=verify)
         dst = Path(out_path) if out_path else OUTPUT_DIR / f"{sanitise(name)}.bin"
         dst.parent.mkdir(parents=True, exist_ok=True)
         if not profile_id:

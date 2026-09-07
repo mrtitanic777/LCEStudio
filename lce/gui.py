@@ -2408,7 +2408,10 @@ class Studio(tk.Tk):
             return
 
         def work():
-            if tu == 0:                                   # LCEStudio's comprehensive any-format -> TU0
+            # TU0 via LCEStudio's comprehensive downgrader (console sources only — it
+            # opens the save as a console World). A Windows-LCE (saveData.ms) source
+            # goes through the engine for EVERY target, which reads little-endian.
+            if tu == 0 and plat != "windows_lce":
                 from . import convert
                 w = World.open(src)
                 convert.downgrade_to_tu0(w, log=self._logcb())
@@ -2416,7 +2419,7 @@ class Studio(tk.Tk):
                 import os
                 os.makedirs(dst, exist_ok=True)
                 return w.save(out=dst, backup=True, progress=self._progress)
-            from .converter import lce_engine as E       # recode/retarget across TU1-75
+            from .converter import lce_engine as E       # recode/retarget across TU0-75
             return E.convert_console_to_console(src, plat, target_tu=tu, out_path=out,
                                                 emulator=emu, log=self._logcb())
         self._run_async(work, on_done=self._conv_done("Converted to TU%d" % tu),
