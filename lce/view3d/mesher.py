@@ -269,6 +269,10 @@ def build_chunk_mesh(world, cx, cz):
         elif bid in (64, 71):                                 # doors -> by facing (from lower half)
             mb = int(meta[x, z, y - 1]) if (meta is not None and y > 0) else 0
             boxlist = blocks.door_boxes(m, mb)
+        elif bid in (77, 143):                                # buttons -> nub on the mounting wall
+            boxlist = blocks.button_boxes(m)
+        elif bid == 69:                                       # lever -> base plate + handle by mount
+            boxlist = blocks.lever_boxes(m)
         elif bid == 85:                                       # fence: post + rails
             boxlist = [(6/16, 0, 6/16, 10/16, 1, 10/16)]
             xm = pad[x, 1+z, 1+y] == 85; xp = pad[2+x, 1+z, 1+y] == 85

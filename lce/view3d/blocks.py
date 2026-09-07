@@ -287,7 +287,7 @@ for _i in (26, 44, 53, 60, 63, 64, 67, 68, 69, 70, 71, 72, 77, 78,
            81, 85, 92, 93, 94, 96): _CAT[_i] = BOX
 # TU-era single slabs / carpet / thin blocks -> BOX (half/thin shapes below);
 # the DOUBLE slabs (125,181,204) stay full CUBEs.
-for _i in (126, 182, 205, 171, 147, 148, 167): _CAT[_i] = BOX
+for _i in (126, 182, 205, 171, 147, 148, 167, 143): _CAT[_i] = BOX
 # ALL stairs (Beta + TU-era) -> BOX, oriented by metadata via stairs_boxes
 STAIR_IDS = (53, 67, 108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180, 203)
 for _i in STAIR_IDS: _CAT[_i] = BOX
@@ -474,6 +474,42 @@ def door_boxes(meta, meta_below=0):
     if edge == 1:   return [(0, 0, 0, 1, 1, th)]          # -Z
     if edge == 2:   return [(1 - th, 0, 0, 1, 1, 1)]      # +X
     return [(0, 0, 1 - th, 1, 1, 1)]                      # +Z
+
+
+def button_boxes(meta):
+    """A button as a small nub on its mounting surface. meta&7: 1/2/3/4 = on the
+    west/east/north/south wall, 5 = floor, 0 = ceiling."""
+    m = meta & 7
+    if m == 1:   return [(0, 6 * _S, 5 * _S, 2 * _S, 10 * _S, 11 * _S)]        # -X wall
+    if m == 2:   return [(1 - 2 * _S, 6 * _S, 5 * _S, 1, 10 * _S, 11 * _S)]    # +X wall
+    if m == 3:   return [(5 * _S, 6 * _S, 0, 11 * _S, 10 * _S, 2 * _S)]        # -Z wall
+    if m == 4:   return [(5 * _S, 6 * _S, 1 - 2 * _S, 11 * _S, 10 * _S, 1)]    # +Z wall
+    if m == 5:   return [(5 * _S, 0, 6 * _S, 11 * _S, 2 * _S, 10 * _S)]        # floor
+    return [(5 * _S, 1 - 2 * _S, 6 * _S, 11 * _S, 1, 10 * _S)]                 # ceiling (0)
+
+
+def lever_boxes(meta):
+    """A lever as a base plate on its mount + a handle nub. meta&7: 1/2/3/4 walls,
+    5/6 floor, 0/7 ceiling."""
+    m = meta & 7
+    p = 3 * _S                                    # plate thickness / handle reach
+    if m in (5, 6):                               # floor
+        return [(5 * _S, 0, 5 * _S, 11 * _S, p, 11 * _S),
+                (7 * _S, p, 7 * _S, 9 * _S, p + 6 * _S, 9 * _S)]
+    if m in (0, 7):                               # ceiling
+        return [(5 * _S, 1 - p, 5 * _S, 11 * _S, 1, 11 * _S),
+                (7 * _S, 1 - p - 6 * _S, 7 * _S, 9 * _S, 1 - p, 9 * _S)]
+    if m == 1:                                    # -X wall
+        return [(0, 5 * _S, 4 * _S, p, 11 * _S, 12 * _S),
+                (p, 6 * _S, 6 * _S, p + 6 * _S, 12 * _S, 10 * _S)]
+    if m == 2:                                    # +X wall
+        return [(1 - p, 5 * _S, 4 * _S, 1, 11 * _S, 12 * _S),
+                (1 - p - 6 * _S, 6 * _S, 6 * _S, 1 - p, 12 * _S, 10 * _S)]
+    if m == 3:                                    # -Z wall
+        return [(4 * _S, 5 * _S, 0, 12 * _S, 11 * _S, p),
+                (6 * _S, 6 * _S, p, 10 * _S, 12 * _S, p + 6 * _S)]
+    return [(4 * _S, 5 * _S, 1 - p, 12 * _S, 11 * _S, 1),                      # +Z wall (4)
+            (6 * _S, 6 * _S, 1 - p - 6 * _S, 10 * _S, 12 * _S, 1 - p)]
 
 
 def is_solid(block_id):
