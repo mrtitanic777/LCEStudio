@@ -2181,22 +2181,38 @@ class Studio(tk.Tk):
 
         self._hr(pad).pack(fill="x", pady=16)
 
-        # -- change title update (engine retarget + comprehensive TU0 downgrade) --
+        # -- change title update (engine retarget/recode across the whole TU0-75 range) --
         ttk.Label(pad, text="Change title update", style="Value.TLabel").pack(anchor="w")
-        ttk.Label(pad, text="Make a console save load on an older/newer TU. TU0 uses the full downgrader "
-                            "(any format \u2192 Beta 1.6.6); TU17\u201368 is an exact chunk-version retarget.",
+        ttk.Label(pad, text="Make a console save load on any title update, TU0 through TU75 \u2014 downgrade "
+                            "to play an old world, or upgrade to a newer one. The source is never changed.",
                   style="Muted.TLabel", wraplength=680, justify="left").pack(anchor="w", pady=(0, 4))
         self.xt_src = tk.StringVar(); self.xt_out = tk.StringVar(); self.xt_emu = tk.BooleanVar(value=False)
         self._conv_srcrow(pad, self.xt_src)
+        # auto-detected source platform + current TU (filled in the background)
+        self.xt_cur = tk.StringVar(value="Pick a save (or open one) to detect its platform and title update.")
+        ttk.Label(pad, textvariable=self.xt_cur, style="Muted.TLabel", wraplength=680,
+                  justify="left").pack(anchor="w", pady=(1, 3))
         tr = ttk.Frame(pad); tr.pack(fill="x", pady=(2, 2))
-        ttk.Label(tr, text="Target TU", style="Muted.TLabel", width=9).pack(side="left")
+        ttk.Label(tr, text="From", style="Muted.TLabel", width=9).pack(side="left")
+        self.xt_from = tk.StringVar(value="Xbox 360")
+        ttk.Combobox(tr, textvariable=self.xt_from, values=plats, state="readonly", width=13).pack(side="left")
+        ttk.Label(tr, text="auto", style="Muted.TLabel").pack(side="left", padx=(6, 0))
+        ttk.Label(tr, text="To  TU", style="Muted.TLabel").pack(side="left", padx=(16, 4))
         self.xt_tu = tk.StringVar(value="0")
         ttk.Combobox(tr, textvariable=self.xt_tu, values=[str(i) for i in range(76)],
                      state="readonly", width=6).pack(side="left")
         ttk.Checkbutton(tr, text="emulator folder output", variable=self.xt_emu).pack(side="left", padx=16)
+        # lossy-conversion warning (updates as source/target change)
+        self.xt_warn = tk.StringVar(value="")
+        ttk.Label(pad, textvariable=self.xt_warn, style="Dup.TLabel", wraplength=680,
+                  justify="left").pack(anchor="w", pady=(1, 2))
         self._conv_outrow(pad, self.xt_out)
         ttk.Button(pad, text="Convert title update  \u2192", style="Accent.TButton",
                    command=self.on_x_titleupdate).pack(anchor="w", pady=(8, 0))
+        self._xt_src_tu = None                       # detected source TU floor (int) or None
+        self.xt_src.trace_add("write", lambda *a: (self._autoplat(self.xt_src, self.xt_from),
+                                                   self._xt_detect()))
+        self.xt_tu.trace_add("write", lambda *a: self._xt_update_warn())
 
         self._hr(pad).pack(fill="x", pady=16)
 
@@ -2309,16 +2325,79 @@ class Studio(tk.Tk):
                                               profile_id=pid, world_name=name, log=self._logcb())
         self._run_async(work, on_done=self._conv_done("Converted platform"), msg="Converting platform\u2026")
 
+    def _xt_source(self):
+        return self.xt_src.get().strip() or self.path
+
+    def _xt_detect(self):
+        """Detect the source's platform + current title update (content-based) and show
+        it. Runs the payload read on a worker thread so the UI never blocks."""
+        src = self._xt_source()
+        if not src:
+            self.xt_cur.set("Pick a save (or open one) to detect its platform and title update.")
+            self._xt_src_tu = None
+            self._xt_update_warn()
+            return
+        plat = self._detect_platform(src) or "xbox360"
+        self.xt_cur.set("Reading %s\u2026" % os.path.basename(str(src).rstrip("/\\")))
+        gen = getattr(self, "_xt_gen", 0) + 1
+        self._xt_gen = gen
+
+        def worker():
+            from . import library as L
+            tu = L.accurate_tu(src, plat)
+            self._post(lambda: self._xt_detect_done(gen, plat, tu))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _xt_detect_done(self, gen, plat, tu):
+        if gen != getattr(self, "_xt_gen", 0):
+            return
+        from . import library as L
+        label = L.PLATFORM_LABEL.get(plat, plat)
+        # remember the source TU floor (lowest number in e.g. "TU46 - TU59")
+        import re as _re
+        nums = [int(n) for n in _re.findall(r"TU(\d+)", tu or "")]
+        self._xt_src_tu = min(nums) if nums else None
+        self.xt_cur.set("Source: %s \u00b7 currently %s" % (label, tu or "unknown title update"))
+        self._xt_update_warn()
+
+    def _xt_update_warn(self):
+        """Warn about a lossy target relative to the detected source TU."""
+        if not hasattr(self, "xt_warn"):
+            return
+        try:
+            tgt = int(self.xt_tu.get())
+        except (ValueError, tk.TclError):
+            self.xt_warn.set(""); return
+        src = self._xt_src_tu
+        msgs = []
+        if tgt == 0:
+            msgs.append("TU0 is the full downgrade to Beta 1.6.6 \u2014 post-Beta blocks, items and "
+                        "entities are simplified or removed.")
+        if src is not None and tgt < src:
+            if tgt < 12 <= src:
+                msgs.append("Below TU12 the world is capped at 128 blocks tall \u2014 anything above y127 is dropped.")
+            if tgt < 69 <= src:
+                msgs.append("Downgrading from Aquatic (TU69+): blocks added after TU%d (coral, kelp, "
+                            "etc.) become air." % tgt)
+        self.xt_warn.set(("\u26a0 " + "  ".join(msgs)) if msgs else "")
+
     def on_x_titleupdate(self):
-        src = self.xt_src.get().strip() or self.path
+        src = self._xt_source()
         if not src:
             messagebox.showwarning("Convert", "Pick a console save (or open one first)."); return
         try:
             tu = int(self.xt_tu.get())
         except ValueError:
             messagebox.showwarning("Convert", "Pick a target title update."); return
+        plat = self._PLATCODE.get(self.xt_from.get(), "xbox360")
         out = self.xt_out.get().strip() or None
         emu = self.xt_emu.get()
+        # confirm a lossy downgrade before doing it
+        warn = self.xt_warn.get().strip()
+        if warn and not messagebox.askyesno("Convert title update",
+                                            "%s\n\nConvert to TU%d anyway? (your source is not changed)"
+                                            % (warn.lstrip("\u26a0 ").strip(), tu)):
+            return
 
         def work():
             if tu == 0:                                   # LCEStudio's comprehensive any-format -> TU0
@@ -2329,8 +2408,8 @@ class Studio(tk.Tk):
                 import os
                 os.makedirs(dst, exist_ok=True)
                 return w.save(out=dst, backup=True, progress=self._progress)
-            from .converter import lce_engine as E       # exact chunk-version retarget (TU17-68)
-            return E.convert_console_to_console(src, "xbox360", target_tu=tu, out_path=out,
+            from .converter import lce_engine as E       # recode/retarget across TU1-75
+            return E.convert_console_to_console(src, plat, target_tu=tu, out_path=out,
                                                 emulator=emu, log=self._logcb())
         self._run_async(work, on_done=self._conv_done("Converted to TU%d" % tu),
                         msg="Converting title update\u2026")
@@ -2925,6 +3004,8 @@ class Studio(tk.Tk):
         self.refresh_all()
         self._update_chrome()
         self.status.set("Opened: %s" % path)
+        if hasattr(self, "xt_cur") and not self.xt_src.get().strip():
+            self._xt_detect()                        # show the Convert tab's source TU for the open save
         try:                                          # opened from the gallery -> show the editor
             if self.nb.select() == str(self.tab_library):
                 self._select_tab(self.tab_overview)
