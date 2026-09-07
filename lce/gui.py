@@ -59,6 +59,7 @@ class Studio(tk.Tk):
         self.geometry("1280x860")
         self.minsize(1000, 660)
         self.world = None
+        self.session = None
         self.path = None
         self._save_meta = None
         self._busy = False
@@ -347,6 +348,7 @@ class Studio(tk.Tk):
         if self._busy:
             return
         self.world = None
+        self.session = None
         self.path = None
         self.status.set("")
         self._update_chrome()
@@ -768,10 +770,9 @@ class Studio(tk.Tk):
     def on_find_pois(self):
         if not self._guard():
             return
-        from . import poi
 
         def work():
-            return poi.find_pois(self.world, log=self._logcb())
+            return self.session.structures.find(log=self._logcb())   # via the API spine
 
         def done(res):
             self._pois = res
@@ -841,14 +842,12 @@ class Studio(tk.Tk):
 
     # -- Waypoints --
     def _wp_load(self):
-        from . import waypoints as WP
-        self._waypoints = WP.load(self.path) if self.path else []
+        self._waypoints = self.session.waypoints.load() if self.session else []   # via the spine
         self._wp_fill_list(); self._wp_refresh_players()
 
     def _wp_save(self):
-        from . import waypoints as WP
-        if self.path:
-            WP.store(self.path, self._waypoints)
+        if self.session:
+            self.session.waypoints.store(self._waypoints)                          # via the spine
 
     def _wp_refresh_players(self):
         if not hasattr(self, "wp_player_cb"):
@@ -1573,17 +1572,15 @@ class Studio(tk.Tk):
         q = self.nbt_query.get().strip()
         if not q:
             self.nbt_search_status.set("Type something to search for."); return
-        if self._nbt_index is not None:                 # already indexed -> instant
+        if self.session.search.indexed:                 # already indexed -> instant
             self._nbt_do_filter(q); return
-        world = self.world
-        from . import nbtsearch as S                     # first search: index the save once
-        self._run_async(lambda: S.build_index(world, log=self._logcb()),
-                        on_done=lambda idx: (setattr(self, "_nbt_index", idx), self._nbt_do_filter(q)),
+        sess = self.session                              # first search: index the save once (via the spine)
+        self._run_async(lambda: sess.search.index(log=self._logcb()),
+                        on_done=lambda idx: self._nbt_do_filter(q),
                         msg="Indexing save for search…")
 
     def _nbt_do_filter(self, q):
-        from . import nbtsearch as S
-        hits = S.filter_index(self._nbt_index or [], q)
+        hits = self.session.search.find(q)               # via the API spine
         self._nbt_hits = hits
         self.nbt_results.delete(*self.nbt_results.get_children())
         for i, h in enumerate(hits):
@@ -3030,6 +3027,8 @@ class Studio(tk.Tk):
     def _loaded(self, r, path):
         self.world, self._save_meta = r
         self.path = path
+        from . import api
+        self.session = api.Session(self.world, path=path, meta=self._save_meta or {})
         self._map_vw = None                          # drop the cached map world for the old save
         self._nbt_index = None                       # stale search index for the old save
         self._wp_load()                              # this world's waypoints
@@ -3891,6 +3890,9 @@ class Studio(tk.Tk):
 
         def done(w):
             self.world = w
+            from . import api
+            self.session = api.Session(w, path=self.path, meta=self._save_meta or {})  # keep the spine in sync
+            self._nbt_index = None
             if hasattr(self, "refresh_all"):
                 self.refresh_all()
             self.status.set("Terrain updated and saved (.bak kept).")
@@ -4076,17 +4078,17 @@ class Studio(tk.Tk):
                            "Choose a target and Apply.")
 
     def _mp_apply(self):
-        if not self._mp_dat:
+        if self._mp_src_img is None:
             messagebox.showinfo("Map painter", "Import an image first."); return
-        from . import mapart
+        try:
+            scale = int(self.mp_scale.get())
+        except ValueError:
+            scale = 0
         tgt = self.mp_target.get()
-        if tgt.startswith("＋"):
-            name = mapart.add_map(self.world, self._mp_dat)
-            what = "new map %s" % name.split("/")[-1]
-        else:
-            name = "data/" + tgt if not tgt.startswith("data/") else tgt
-            mapart.put_map(self.world, name, self._mp_dat)
-            what = tgt
+        replace = None if tgt.startswith("＋") else tgt
+        name = self.session.maps.paint(self._mp_src_img, dither=self.mp_dither.get(),   # via the spine
+                                       scale=scale, replace=replace)
+        what = ("new map %s" % name.split("/")[-1]) if replace is None else tgt
         self._mp_refresh_maps()
         self.status.set("Painted %s — use File ▸ Save (Ctrl+S) to write it into the world." % what)
         messagebox.showinfo("Map painter",

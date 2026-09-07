@@ -72,6 +72,8 @@ class _Entities:
 class _Search:
     """Whole-save NBT search (lce.nbtsearch), with a cached index."""
     def __init__(self, s): self._s = s; self._index = None
+    @property
+    def indexed(self): return self._index is not None
     def index(self, log=None):
         if self._index is None:
             from . import nbtsearch

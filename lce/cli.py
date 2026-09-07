@@ -470,24 +470,20 @@ def cmd_relight(a):
 def cmd_iso(a):
     # iso <save|CON> [out.png] [tile]  -- render an isometric 3D portrait of the world
     import os
-    from . import iso
-    from .view3d.world import World as VW
+    from . import api
     dat = a[0]
-    if os.path.isdir(dat):
-        dat = os.path.join(dat, "savegame.dat")
-    vw = VW.load(dat)
     tile = int(a[2]) if len(a) > 2 else 12
-    img = iso.render_iso(vw, tile=tile, log=print)
-    out = a[1] if len(a) > 1 else os.path.splitext(dat)[0] + "_iso.png"
+    img = api.open(dat).render.iso(tile=tile, log=print)         # via the API spine
+    base = os.path.join(dat, "savegame") if os.path.isdir(dat) else os.path.splitext(dat)[0]
+    out = a[1] if len(a) > 1 else base + "_iso.png"
     img.save(out)
     print("saved isometric portrait %dx%d -> %s" % (img.width, img.height, out))
 
 
 def cmd_pois(a):
     # pois <save|CON> [type]  -- find structures/POIs (dungeon/loot/stronghold/portal/build/sign)
-    from . import poi
-    w = World.open(a[0])
-    ps = poi.find_pois(w, log=print)
+    from . import api
+    ps = api.open(a[0]).structures.find(log=print)               # via the API spine
     flt = a[1] if len(a) > 1 else None
     if flt:
         ps = [p for p in ps if p["type"] == flt]
@@ -523,10 +519,11 @@ def cmd_playerpos(a):
 
 # ---- vendored full converter engine (Xbox360 / PS3 / Windows LCE / Java, any TU) ----
 def cmd_xjava(a):
-    # xjava <console-save> <out-dir> [platform]   LCE -> Java (every chunk format)
-    from .converter import lce_engine as E
+    # xjava <console-save> <out-dir> [platform] [java_version]  LCE -> Java (every chunk format)
+    from . import api
     plat = a[2] if len(a) > 2 else "xbox360"
-    E.convert_lce_to_java(a[0], plat, a[1], log=print)
+    jv = a[3] if len(a) > 3 else None
+    api.convert_java(a[0], plat, a[1], java_version=jv, log=print)      # via the API spine
 
 
 def cmd_retarget(a):
