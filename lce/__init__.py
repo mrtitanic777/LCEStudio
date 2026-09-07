@@ -25,13 +25,21 @@ Modules:
 from . import codec, recover, stfs, nbt, inject, world, structure, convert
 from .world import World, Region, Chunk
 
+# The API spine — one clean surface + a plug-and-play capability registry (both
+# pure-Python and lazy, so importing them pulls in no heavy dependency).
+from . import registry, api
+from .api import (Session, open, library_scan, describe,
+                  convert_title_update, convert_platform, convert_java)
+
 try:
     from . import viz
 except Exception:                       # Pillow missing -> engine/CLI still work
     viz = None
 
 __all__ = ["World", "Region", "Chunk", "codec", "recover", "stfs", "nbt",
-           "inject", "world", "viz", "launch"]
+           "inject", "world", "viz", "launch",
+           "Session", "open", "library_scan", "describe", "registry", "api",
+           "convert_title_update", "convert_platform", "convert_java"]
 __version__ = "1.0"
 
 

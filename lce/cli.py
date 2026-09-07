@@ -561,7 +561,70 @@ def cmd_resign(a):
     print("resigned -> %s" % out)
 
 
-_CMDS = {"info": cmd_info, "ls": cmd_ls, "inv": cmd_inv, "block": cmd_block,
+def cmd_caps(a):
+    """List every registered capability (the plug-and-play spine)."""
+    from . import registry as R
+    for cat in R.categories():
+        print("%s:" % cat)
+        for c in R.by_category(cat):
+            tag = ("  [save]" if c.scope == "session" else "  [file]")
+            print("  %-22s %s%s" % (c.name, c.title, tag))
+            if c.summary:
+                print("      %s" % c.summary)
+            for p in c.params:
+                req = " (required)" if p.required else (" [=%s]" % p.default if p.default is not None else "")
+                ch = ("  one of %s" % (p.choices,)) if p.choices else ""
+                print("        %s:%s%s%s%s" % (p.name, p.type, req, ("  " + p.help if p.help else ""), ch))
+
+
+def _coerce(cap, key, val):
+    t = next((p.type for p in cap.params if p.name == key), "str")
+    if t == "int":
+        return int(val)
+    if t == "float":
+        return float(val)
+    if t == "bool":
+        return str(val).lower() in ("1", "true", "yes", "on")
+    return val
+
+
+def cmd_cap(a):
+    """Run any registered capability by name: cap <name> <save> [key=value ...]."""
+    from . import registry as R, api
+    if not a or not R.has(a[0]):
+        print("usage: cap <name> <save> [key=value ...]   (see 'caps' for names)")
+        return
+    cap = R.get(a[0])
+    params, positional = {}, []
+    for tok in a[1:]:
+        if "=" in tok and not tok.startswith(("-", "/")) and ":" not in tok.split("=", 1)[0]:
+            k, v = tok.split("=", 1)
+            params[k] = _coerce(cap, k, v)
+        else:
+            positional.append(tok)
+    save = positional[0] if positional else None
+    params.setdefault("log", print)
+    if cap.scope == "path":
+        res = cap.run(path=save, **params)
+    else:
+        sess = api.open(save)
+        res = cap.run(session=sess, **params)
+        if cap.result == "world":
+            out = positional[1] if len(positional) > 1 else None
+            print("  ->", sess.save(out=out, backup=True))
+    if cap.result == "image" and res is not None:
+        out = (positional[1] if len(positional) > 1 else None) or (a[0].replace(".", "_") + ".png")
+        res.save(out); print("  saved image ->", out)
+    elif cap.result == "data":
+        print("  %d result(s)" % (len(res) if hasattr(res, "__len__") else 0))
+    elif cap.result == "path":
+        print("  ->", res)
+    elif res is not None and cap.result == "text":
+        print(res if isinstance(res, str) else repr(res)[:400])
+
+
+_CMDS = {"caps": cmd_caps, "cap": cmd_cap,
+         "info": cmd_info, "ls": cmd_ls, "inv": cmd_inv, "block": cmd_block,
          "mob": cmd_mob, "spawner": cmd_spawner, "level": cmd_level,
          "nbt": cmd_nbt, "analyze": cmd_analyze, "convert": cmd_convert,
          "tojava": cmd_tojava, "stfs": cmd_stfs, "reassign": cmd_reassign,
