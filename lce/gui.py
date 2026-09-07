@@ -1633,6 +1633,8 @@ class Studio(tk.Tk):
                    command=self.tool_map_items).grid(row=0, column=1, padx=4, pady=6, sticky="w")
         ttk.Button(mp, text="📊  World analytics report…", width=26,
                    command=self.tool_report).grid(row=0, column=2, padx=4, pady=6, sticky="w")
+        ttk.Button(mp, text="🎨  Paint an image onto a map…", width=34,
+                   command=self.tool_map_painter).grid(row=1, column=0, padx=8, pady=(0, 6), sticky="w")
         ttk.Label(mp, text="A satellite-style PNG of the whole world (all TU formats), plus the "
                            "in-game maps as images.", foreground="#666").grid(
             row=1, column=0, columnspan=2, padx=8, sticky="w")
@@ -3968,6 +3970,128 @@ class Studio(tk.Tk):
                         on_done=lambda n: messagebox.showinfo("Map items",
                                                               "Rendered %d in-game map(s) to:\n%s" % (n, out)),
                         msg="Rendering in-game map items…")
+
+    # ---------------------------------------------------------------- Map painter
+    def tool_map_painter(self):
+        if not self._guard() or not self.world:
+            messagebox.showwarning("Map painter", "Open a save first."); return
+        if not _HAVE_PIL:
+            messagebox.showwarning("Map painter", "Pillow is required for the map painter."); return
+        p = self.THEMES[self.theme]
+        win = tk.Toplevel(self); self._mp_win = win
+        win.title("Map Painter — paint an image onto an in-game map")
+        win.configure(background=p["BG"]); win.geometry("620x560")
+        self._mp_dat = None; self._mp_photo = None; self._mp_map_photos = []
+        body = ttk.Frame(win, padding=12); body.pack(fill="both", expand=True)
+        ttk.Label(body, text="MAP PAINTER", style="Section.TLabel").pack(anchor="w")
+        ttk.Label(body, text="Turn any picture into an in-game map. Import an image, it's dithered to "
+                            "the map palette, then applied as a new map or over an existing one.",
+                  style="Muted.TLabel", wraplength=580, justify="left").pack(anchor="w", pady=(1, 8))
+        row = ttk.Frame(body); row.pack(fill="both", expand=True)
+        # left: existing maps
+        left = ttk.Frame(row); left.pack(side="left", fill="y", padx=(0, 12))
+        ttk.Label(left, text="Apply to", style="Value.TLabel").pack(anchor="w")
+        self.mp_target = tk.StringVar(value="＋ New map")
+        self.mp_targcb = ttk.Combobox(left, textvariable=self.mp_target, state="readonly", width=18)
+        self.mp_targcb.pack(anchor="w", pady=(2, 8))
+        ttk.Label(left, text="Existing maps", style="Muted.TLabel").pack(anchor="w")
+        self._mp_maps_box = ttk.Frame(left); self._mp_maps_box.pack(anchor="w", pady=(2, 0))
+        # right: preview + controls
+        right = ttk.Frame(row); right.pack(side="left", fill="both", expand=True)
+        self._mp_prev = ttk.Label(right, anchor="center", background=p["CANVAS"])
+        self._mp_prev.pack(fill="both", expand=True)
+        opt = ttk.Frame(right); opt.pack(fill="x", pady=(8, 0))
+        ttk.Button(opt, text="Import image…", style="Accent.TButton",
+                   command=self._mp_import).pack(side="left")
+        self.mp_dither = tk.BooleanVar(value=True)
+        ttk.Checkbutton(opt, text="dither", variable=self.mp_dither,
+                        command=self._mp_reapply).pack(side="left", padx=(10, 0))
+        ttk.Label(opt, text="scale", style="Muted.TLabel").pack(side="left", padx=(10, 2))
+        self.mp_scale = tk.StringVar(value="0")
+        ttk.Combobox(opt, textvariable=self.mp_scale, values=["0", "1", "2", "3", "4"],
+                     state="readonly", width=3).pack(side="left")
+        self.mp_status = tk.StringVar(value="Import an image to begin.")
+        ttk.Label(body, textvariable=self.mp_status, style="Muted.TLabel", wraplength=580,
+                  justify="left").pack(anchor="w", pady=(8, 0))
+        bar = ttk.Frame(body); bar.pack(fill="x", pady=(6, 0))
+        ttk.Button(bar, text="Apply to world  →", style="Accent.TButton",
+                   command=self._mp_apply).pack(side="left")
+        ttk.Button(bar, text="Close", command=win.destroy).pack(side="right")
+        self._mp_src_img = None
+        self._mp_refresh_maps()
+
+    def _mp_refresh_maps(self):
+        from . import mapart, atlas
+        from PIL import Image
+        maps = mapart.list_maps(self.world)
+        self.mp_targcb["values"] = ["＋ New map"] + [m[0].split("/")[-1] for m in maps]
+        for w in self._mp_maps_box.winfo_children():
+            w.destroy()
+        self._mp_map_photos = []
+        for i, (name, blob) in enumerate(maps[:12]):
+            try:
+                im = atlas.render_map_item(blob)
+                if im is None:
+                    continue
+                ph = ImageTk.PhotoImage(im.resize((64, 64), Image.NEAREST))
+                self._mp_map_photos.append(ph)
+                cell = ttk.Frame(self._mp_maps_box); cell.grid(row=i // 3, column=i % 3, padx=3, pady=3)
+                lb = ttk.Label(cell, image=ph); lb.pack()
+                lb.bind("<Button-1>", lambda e, n=name: self.mp_target.set(n.split("/")[-1]))
+                ttk.Label(cell, text=name.split("/")[-1].replace(".dat", ""),
+                          style="Muted.TLabel").pack()
+            except Exception:
+                pass
+        if not maps:
+            ttk.Label(self._mp_maps_box, text="(none yet)", style="Muted.TLabel").grid(row=0, column=0)
+
+    def _mp_import(self):
+        from PIL import Image
+        f = filedialog.askopenfilename(title="Pick an image to paint onto a map",
+                                       filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.gif *.webp"),
+                                                  ("All files", "*.*")])
+        if not f:
+            return
+        try:
+            self._mp_src_img = Image.open(f).convert("RGB")
+        except Exception as e:
+            self._err(e); return
+        self._mp_reapply()
+
+    def _mp_reapply(self):
+        if self._mp_src_img is None:
+            return
+        from . import mapart, atlas
+        from PIL import Image
+        try:
+            scale = int(self.mp_scale.get())
+        except ValueError:
+            scale = 0
+        self._mp_dat = mapart.image_to_map_dat(self._mp_src_img, dither=self.mp_dither.get(), scale=scale)
+        im = atlas.render_map_item(self._mp_dat)
+        if im is not None:
+            self._mp_photo = ImageTk.PhotoImage(im.resize((320, 320), Image.NEAREST))
+            self._mp_prev.configure(image=self._mp_photo, text="")
+        self.mp_status.set("Preview ready — 128×128, dithered to the map palette. "
+                           "Choose a target and Apply.")
+
+    def _mp_apply(self):
+        if not self._mp_dat:
+            messagebox.showinfo("Map painter", "Import an image first."); return
+        from . import mapart
+        tgt = self.mp_target.get()
+        if tgt.startswith("＋"):
+            name = mapart.add_map(self.world, self._mp_dat)
+            what = "new map %s" % name.split("/")[-1]
+        else:
+            name = "data/" + tgt if not tgt.startswith("data/") else tgt
+            mapart.put_map(self.world, name, self._mp_dat)
+            what = tgt
+        self._mp_refresh_maps()
+        self.status.set("Painted %s — use File ▸ Save (Ctrl+S) to write it into the world." % what)
+        messagebox.showinfo("Map painter",
+                            "Applied to %s.\n\nUse File ▸ Save (Ctrl+S) to write it into the save "
+                            "(a .bak backup is kept). Craft/hold the map in-game to see it." % what)
 
     def tool_view3d(self):
         if not self._guard():
