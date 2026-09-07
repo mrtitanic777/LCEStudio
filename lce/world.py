@@ -107,6 +107,14 @@ class Chunk:
     def get_block(self, x, y, z):
         return self._blocks()[self._idx(x, y, z)]
 
+    def get_data(self, x, y, z):
+        """The 4-bit block metadata at (x,y,z), or 0 if this chunk has no Data array."""
+        d = self._data()
+        if d is None:
+            return 0
+        i = self._idx(x, y, z)
+        return (d[i >> 1] >> 4) & 0xF if (i & 1) else d[i >> 1] & 0xF
+
     def set_block(self, x, y, z, bid, data=0):
         i = self._idx(x, y, z)
         self._blocks()[i] = bid & 0xFF
@@ -279,26 +287,41 @@ class Region:
         """Record a block edit against a raw format-12 chunk (applied at rebuild)."""
         self.aquatic_edits.setdefault((lcx, lcz), {})[(lx, y, lz)] = (bid & 0xFF, meta & 0xF)
 
+    def _aquatic_grids(self, lcx, lcz):
+        """Decode a raw format-12 chunk's id + metadata grids once, cached. Returns
+        (ids, data) np arrays [16,256,16] (X,Y,Z), or (None, None) if undecodable."""
+        got = self._aquatic_dec.get((lcx, lcz))
+        if got is None:
+            from . import format12
+            try:
+                dec = format12.decode_chunk(self.aquatic_raw[(lcx, lcz)])
+                got = (dec["ids"], dec["data"])
+            except Exception:
+                got = (None, None)
+            self._aquatic_dec[(lcx, lcz)] = got
+        return got
+
     def aquatic_block(self, lcx, lcz, lx, y, lz):
         """Read a block id from a raw format-12 (Aquatic) chunk, honouring any pending
-        edit. Decodes the chunk's id grid once and caches it. Returns None if there's no
-        aquatic chunk here or y is out of range."""
+        edit. Returns None if there's no aquatic chunk here or y is out of range."""
         if not (0 <= y < 256) or not self.has_aquatic(lcx, lcz):
             return None
         e = self.aquatic_edits.get((lcx, lcz))
         if e is not None and (lx & 15, y, lz & 15) in e:
             return e[(lx & 15, y, lz & 15)][0]
-        grid = self._aquatic_dec.get((lcx, lcz))
-        if grid is None:
-            from . import format12
-            try:
-                grid = format12.decode_chunk(self.aquatic_raw[(lcx, lcz)])["ids"]
-            except Exception:
-                grid = False
-            self._aquatic_dec[(lcx, lcz)] = grid
-        if grid is False:
+        ids, _data = self._aquatic_grids(lcx, lcz)
+        return None if ids is None else int(ids[lx & 15, y, lz & 15])
+
+    def aquatic_data(self, lcx, lcz, lx, y, lz):
+        """Read a block's metadata (0-15) from a raw format-12 (Aquatic) chunk, honouring
+        any pending edit. Returns None if there's no aquatic chunk here or y is out of range."""
+        if not (0 <= y < 256) or not self.has_aquatic(lcx, lcz):
             return None
-        return int(grid[lx & 15, y, lz & 15])
+        e = self.aquatic_edits.get((lcx, lcz))
+        if e is not None and (lx & 15, y, lz & 15) in e:
+            return e[(lx & 15, y, lz & 15)][1]
+        _ids, data = self._aquatic_grids(lcx, lcz)
+        return None if data is None else int(data[lx & 15, y, lz & 15]) & 0xF
 
     def rebuild(self, on_chunk=None):
         """Return updated region bytes, re-encoding dirty old-NBT chunks AND any
@@ -616,6 +639,19 @@ class World:
         reg = self.region(rx, rz, nether)
         if reg is not None:
             return reg.aquatic_block(wcx - rx * 32, wcz - rz * 32, x & 15, y, z & 15)
+        return None
+
+    def get_block_data(self, x, y, z, nether=False):
+        """The 4-bit block metadata (0-15) at (x,y,z) for old-NBT AND Aquatic (v12)
+        chunks, or None if the chunk isn't present. Mirrors get_block."""
+        wcx, wcz = x >> 4, z >> 4
+        c = self.chunk(wcx, wcz, nether)
+        if c is not None:
+            return c.get_data(x, y, z)
+        rx, rz = wcx >> 5, wcz >> 5
+        reg = self.region(rx, rz, nether)
+        if reg is not None:
+            return reg.aquatic_data(wcx - rx * 32, wcz - rz * 32, x & 15, y, z & 15)
         return None
 
     def set_block(self, x, y, z, bid, data=0, nether=False):

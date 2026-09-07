@@ -3413,7 +3413,12 @@ class Studio(tk.Tk):
             if b is None:
                 self.blk_result.set("(%d,%d,%d) is in an un-generated chunk" % (x, y, z)); return
             from . import names as NM
-            self.blk_result.set("block(%d,%d,%d) = %d  %s" % (x, y, z, b, NM.name_for(b) or ""))
+            data = self.world.get_block_data(x, y, z)
+            self.blk["id"].set(str(b))
+            if data is not None:
+                self.blk["data"].set(str(data))
+            dtxt = "" if data in (None, 0) else "  data %d" % data
+            self.blk_result.set("block(%d,%d,%d) = %d%s  %s" % (x, y, z, b, dtxt, NM.name_for(b) or ""))
         except Exception as e:
             self._err(e)
 
