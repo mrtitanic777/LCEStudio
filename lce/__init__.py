@@ -40,7 +40,7 @@ __all__ = ["World", "Region", "Chunk", "codec", "recover", "stfs", "nbt",
            "inject", "world", "viz", "launch",
            "Session", "open", "library_scan", "describe", "registry", "api",
            "convert_title_update", "convert_platform", "convert_java"]
-__version__ = "1.0"
+__version__ = "1.0.0"
 
 
 def launch(path=None):

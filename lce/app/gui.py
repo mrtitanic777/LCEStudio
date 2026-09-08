@@ -378,6 +378,7 @@ class Studio(tk.Tk):
         self._select_tab(self.tab_overview)             # branded welcome (with byline) opens first
         if self._lib_folders():                         # only auto-scan folders the user has chosen
             self.after(400, self._lib_scan)
+        self.after(2500, self._update_boot_check)       # quietly check for a newer release
 
     # ---------------------------------------------------------------- Overview
     def _build_overview(self):
@@ -402,6 +403,12 @@ class Studio(tk.Tk):
         ttk.Label(wc, style="Muted.TLabel", anchor="center", justify="center", wraplength=470,
                   text="You can also bring in a .zip, an STFS package, or a Save*.bin "
                        "from the Import / Export tab.").pack(pady=(28, 0))
+        from lce import __version__ as _VER
+        foot = ttk.Frame(wc); foot.pack(pady=(30, 0))
+        ttk.Label(foot, text="v%s" % _VER, style="Muted.TLabel").pack(side="left")
+        ttk.Label(foot, text="·", style="Muted.TLabel").pack(side="left", padx=8)
+        ttk.Button(foot, text="Check for updates", style="Card.TButton",
+                   command=self.on_check_updates).pack(side="left")
 
         # --- info: a dashboard that fills the page ---
         self.ov_info = ttk.Frame(wrap)
@@ -458,6 +465,170 @@ class Studio(tk.Tk):
     def _show_overview(self, have):
         self.ov_info.pack(fill="both", expand=True) if have else self.ov_info.pack_forget()
         self.ov_welcome.pack_forget() if have else self.ov_welcome.pack(fill="both", expand=True)
+
+    # ------------------------------------------------------------ auto-update
+    def _update_boot_check(self):
+        """Fire-and-forget check on launch: if a newer release exists, offer it.
+        Runs the network call off the UI thread and never nags on failure."""
+        if getattr(self, "_update_shown", False):
+            return
+        def work():
+            try:
+                from lce.tools import updater as U
+                u = U.check()
+            except Exception:
+                u = None
+            if u:
+                self.after(0, lambda: self._show_update_modal(u))
+        threading.Thread(target=work, daemon=True).start()
+
+    def on_check_updates(self):
+        """Manual 'Check for updates' — always tells the user the outcome."""
+        from lce.tools import updater as U
+        self.status.set("Checking for updates…")
+        def work():
+            try:
+                u = U.check()
+                err = None
+            except Exception as e:
+                u, err = None, str(e)
+            def done():
+                self.status.set("")
+                if u:
+                    self._show_update_modal(u)
+                elif err:
+                    messagebox.showwarning("Check for updates",
+                                           "Couldn't check for updates:\n%s" % err)
+                else:
+                    messagebox.showinfo("Check for updates",
+                                        "You're up to date — LCEStudio v%s is the latest."
+                                        % U.current_version())
+            self.after(0, done)
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_update_modal(self, u):
+        """The release popup: what's new + You-have / Download-size, then
+        Later / Install now with a live progress bar. Mirrors NexiaIDE's."""
+        if getattr(self, "_update_shown", False):
+            return
+        self._update_shown = True
+        from lce.tools import updater as U
+        p = self.THEMES[self.theme]
+        cur = U.current_version()
+        win = tk.Toplevel(self); self._upd_win = win
+        win.title("Update available")
+        win.configure(background=p["BG"])
+        win.geometry("560x520"); win.transient(self); win.resizable(False, False)
+        try:
+            win.grab_set()
+        except tk.TclError:
+            pass
+        body = ttk.Frame(win, padding=(22, 20)); body.pack(fill="both", expand=True)
+
+        head = ttk.Frame(body); head.pack(fill="x")
+        ttk.Label(head, text="\U0001F680", font=("Segoe UI", 20)).pack(side="left", padx=(0, 10))
+        ttk.Label(head, text="LCEStudio v%s is available!" % u["version"],
+                  style="H1.TLabel").pack(side="left")
+
+        ttk.Label(body, text="WHAT'S NEW", style="Section.TLabel").pack(anchor="w", pady=(18, 8))
+        box = tk.Frame(body, background=p.get("PANEL", p["BG"]),
+                       highlightbackground=self.LINE, highlightthickness=1)
+        box.pack(fill="both", expand=True)
+        inner = ttk.Frame(box, padding=12); inner.pack(fill="both", expand=True)
+        notes = u["notes"] or ["General improvements and fixes."]
+        for n in notes[:10]:
+            r = ttk.Frame(inner); r.pack(fill="x", anchor="w", pady=2)
+            ttk.Label(r, text="•", style="Accent.TLabel").pack(side="left", padx=(0, 8), anchor="n")
+            ttk.Label(r, text=n, style="Muted.TLabel", wraplength=470,
+                      justify="left").pack(side="left", fill="x", expand=True)
+
+        size_mb = ("%.1f MB" % (u["size"] / 1048576)) if u.get("size") else ""
+        meta = "You have v%s" % cur + (("   ·   Download %s" % size_mb) if size_mb else "")
+        ttk.Label(body, text=meta, style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
+
+        # progress (hidden until Install)
+        self._upd_prog = ttk.Frame(body)
+        self._upd_bar = ttk.Progressbar(self._upd_prog, mode="determinate", maximum=100)
+        self._upd_bar.pack(fill="x")
+        self._upd_stat = tk.StringVar(value="Starting download…")
+        ttk.Label(self._upd_prog, textvariable=self._upd_stat,
+                  style="Muted.TLabel").pack(anchor="w", pady=(6, 0))
+
+        self._hr(body).pack(fill="x", pady=(16, 12))
+        bar = ttk.Frame(body); bar.pack(fill="x")
+        ttk.Label(bar, text="Would you like to install it?",
+                  style="Muted.TLabel").pack(side="left")
+        self._upd_install_btn = ttk.Button(bar, text="Install now", style="Accent.TButton",
+                                            command=lambda: self._upd_start_install(u))
+        self._upd_install_btn.pack(side="right")
+        self._upd_later_btn = ttk.Button(bar, text="Later", style="Card.TButton",
+                                          command=win.destroy)
+        self._upd_later_btn.pack(side="right", padx=(0, 8))
+
+        def on_close():
+            if not getattr(self, "_upd_installing", False):
+                win.destroy()
+        win.protocol("WM_DELETE_WINDOW", on_close)
+
+    def _upd_start_install(self, u):
+        from lce.tools import updater as U
+        # Not the packaged exe? We can't self-replace — send them to the page.
+        if not U.is_frozen():
+            import webbrowser
+            webbrowser.open(u.get("html_url") or U.release_page())
+            self._upd_stat_set("Opened the download page in your browser.")
+            return
+        self._upd_installing = True
+        self._upd_install_btn.configure(state="disabled", text="Downloading…")
+        self._upd_later_btn.configure(state="disabled")
+        self._upd_prog.pack(fill="x", pady=(14, 0))
+        dest = U.temp_download_path(u["version"])
+
+        def prog(received, total, pct):
+            def upd():
+                self._upd_bar.configure(value=pct)
+                self._upd_stat.set("Downloading… %d%%  (%.1f / %.1f MB)"
+                                   % (pct, received / 1048576,
+                                      (total or u.get("size") or 0) / 1048576))
+            self.after(0, upd)
+
+        def work():
+            ok, err, _sha = U.download(u["url"], dest, on_progress=prog,
+                                       expected_size=u.get("size") or None,
+                                       expected_sha256=u.get("sha256") or None)
+            def done():
+                if not ok:
+                    self._upd_installing = False
+                    self._upd_stat.set("Update failed: %s" % (err or "unknown error"))
+                    self._upd_install_btn.configure(state="normal", text="Retry")
+                    self._upd_later_btn.configure(state="normal")
+                    return
+                self._upd_stat.set("Verified. Launching the installer…")
+                self._upd_install_btn.configure(text="Installing…")
+                ok2, err2 = U.apply_update(dest, relaunch=True)
+                if not ok2:
+                    self._upd_installing = False
+                    self._upd_stat.set("Couldn't start the install: %s" % err2)
+                    self._upd_install_btn.configure(state="normal", text="Retry")
+                    self._upd_later_btn.configure(state="normal")
+                    return
+                # helper is waiting on our PID — quit so it can swap the exe
+                self.after(400, self._destroy_for_update)
+            self.after(0, done)
+        threading.Thread(target=work, daemon=True).start()
+
+    def _upd_stat_set(self, msg):
+        try:
+            self._upd_prog.pack(fill="x", pady=(14, 0))
+            self._upd_stat.set(msg)
+        except Exception:
+            pass
+
+    def _destroy_for_update(self):
+        try:
+            self.destroy()
+        except Exception:
+            os._exit(0)
 
     # ---------------------------------------------------------------- Map
     def _build_map(self):

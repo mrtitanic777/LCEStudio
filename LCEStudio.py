@@ -16,6 +16,10 @@ if not getattr(sys, "frozen", False):
 
 def main():
     argv = sys.argv[1:]
+    if argv and argv[0] in ("--version", "-V"):
+        from lce import __version__
+        print("LCEStudio %s" % __version__)
+        return 0
     if argv and argv[0] == "--view3d":
         from lce.view3d.__main__ import main as view_main
         return view_main(argv[1:])
