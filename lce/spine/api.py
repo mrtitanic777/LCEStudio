@@ -40,6 +40,8 @@ class _Inventory:
     def items(self): return self._s.world.inventory()
     def add(self, item_id, count=1, damage=0): return self._s.world.inventory_add(item_id, count, damage)
     def clear(self): return self._s.world.inventory_clear()
+    def meta(self, slot): return self._s.world.read_item_meta(slot)
+    def set_meta(self, slot, **fields): return self._s.world.set_item_meta(slot, **fields)
 
 
 class _Players:

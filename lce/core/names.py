@@ -761,3 +761,38 @@ def search(query, kind="block"):
     hits = [(lbl, i, k) for lbl, i, k in idx if q in k or str(i).startswith(q)]
     hits.sort(key=lambda t: (not t[2].startswith(q), t[1]))
     return [lbl for lbl, _i, _k in hits]
+
+
+# ---- enchantments / potion effects (LCE numeric ids, pre-flattening 1.12-era) ----
+ENCHANT_NAMES = {
+    0: "Protection", 1: "Fire Protection", 2: "Feather Falling", 3: "Blast Protection",
+    4: "Projectile Protection", 5: "Respiration", 6: "Aqua Affinity", 7: "Thorns",
+    8: "Depth Strider", 9: "Frost Walker", 10: "Curse of Binding",
+    16: "Sharpness", 17: "Smite", 18: "Bane of Arthropods", 19: "Knockback",
+    20: "Fire Aspect", 21: "Looting", 22: "Sweeping Edge",
+    32: "Efficiency", 33: "Silk Touch", 34: "Unbreaking", 35: "Fortune",
+    48: "Power", 49: "Punch", 50: "Flame", 51: "Infinity",
+    61: "Luck of the Sea", 62: "Lure", 70: "Mending", 71: "Curse of Vanishing",
+}
+ENCHANT_MAX = {           # usual maximum level (others default to 1)
+    0: 4, 1: 4, 2: 4, 3: 4, 4: 4, 5: 3, 7: 3, 8: 3, 16: 5, 17: 5, 18: 5, 19: 2,
+    20: 2, 21: 3, 22: 3, 32: 5, 34: 3, 35: 3, 48: 5, 49: 2, 61: 3, 62: 3,
+}
+EFFECT_NAMES = {
+    1: "Speed", 2: "Slowness", 3: "Haste", 4: "Mining Fatigue", 5: "Strength",
+    6: "Instant Health", 7: "Instant Damage", 8: "Jump Boost", 9: "Nausea",
+    10: "Regeneration", 11: "Resistance", 12: "Fire Resistance", 13: "Water Breathing",
+    14: "Invisibility", 15: "Blindness", 16: "Night Vision", 17: "Hunger", 18: "Weakness",
+    19: "Poison", 20: "Wither", 21: "Health Boost", 22: "Absorption", 23: "Saturation",
+    24: "Glowing", 25: "Levitation", 26: "Luck", 27: "Bad Luck",
+}
+POTION_ITEM_IDS = {373, 438, 441, 440}    # potion, splash, lingering, tipped arrow
+POTION_BASES = [
+    "minecraft:water", "minecraft:awkward", "minecraft:thick", "minecraft:mundane",
+    "minecraft:night_vision", "minecraft:invisibility", "minecraft:leaping",
+    "minecraft:fire_resistance", "minecraft:swiftness", "minecraft:slowness",
+    "minecraft:water_breathing", "minecraft:healing", "minecraft:harming",
+    "minecraft:poison", "minecraft:regeneration", "minecraft:strength",
+    "minecraft:weakness", "minecraft:luck", "minecraft:turtle_master",
+    "minecraft:slow_falling",
+]

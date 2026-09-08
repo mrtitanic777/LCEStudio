@@ -1063,6 +1063,8 @@ class Studio(tk.Tk):
         br = ttk.Frame(side); br.pack(anchor="w", pady=(16, 0))
         ttk.Button(br, text="Set slot", style="Accent.TButton", command=self.on_inv_add).pack(side="left")
         ttk.Button(br, text="Remove", command=self.on_inv_remove).pack(side="left", padx=8)
+        ttk.Button(side, text="✦  Enchant / rename / potion…", style="Card.TButton",
+                   command=self.on_item_editor).pack(anchor="w", pady=(8, 0))
         self._hr(side).pack(fill="x", pady=20)
         self.inv_summary = tk.StringVar(value="")
         ttk.Label(side, textvariable=self.inv_summary, style="Muted.TLabel").pack(anchor="w", pady=(0, 12))
@@ -3371,6 +3373,124 @@ class Studio(tk.Tk):
         if not self._guard():
             return
         self.world.inventory_clear(); self.refresh_inv()
+
+    # ------------------------------------------------------------ item editor
+    def on_item_editor(self):
+        if not self._guard():
+            return
+        slot = getattr(self, "_grid_sel", None)
+        if slot is None:
+            messagebox.showinfo("Item editor", "Click a slot in the grid first."); return
+        meta = self.session.inventory.meta(slot)
+        if meta is None:
+            messagebox.showinfo("Item editor", "That slot is empty — Set an item in it first."); return
+        from ..core import names as NM
+        self._ie_slot = slot
+        self._ie_enchants = list(meta["enchants"])          # [(id,lvl)]
+        self._ie_effects = list(meta["effects"])            # [(id,amp,dur)]
+        is_potion = meta["id"] in NM.POTION_ITEM_IDS
+        p = self.THEMES[self.theme]
+        win = tk.Toplevel(self); self._ie_win = win
+        win.title("Item editor — %s" % (NM.name_for(meta["id"], "item") or ("id %d" % meta["id"])))
+        win.configure(background=p["BG"]); win.geometry("520x560")
+        body = ttk.Frame(win, padding=12); body.pack(fill="both", expand=True)
+        ttk.Label(body, text="Slot %d · %s" % (slot, NM.name_for(meta["id"], "item") or meta["id"]),
+                  style="Section.TLabel").pack(anchor="w")
+        # custom name
+        ttk.Label(body, text="Custom name", style="Value.TLabel").pack(anchor="w", pady=(10, 0))
+        self.ie_name = tk.StringVar(value=meta["name"] or "")
+        ttk.Entry(body, textvariable=self.ie_name, width=44).pack(anchor="w", pady=(2, 0))
+        # enchantments
+        ttk.Label(body, text="Enchantments", style="Value.TLabel").pack(anchor="w", pady=(12, 0))
+        self.ie_ench_list = tk.Listbox(body, height=6, width=44)
+        self.ie_ench_list.pack(anchor="w", pady=(2, 2))
+        er = ttk.Frame(body); er.pack(anchor="w")
+        self.ie_ench_pick = tk.StringVar()
+        ecb = ttk.Combobox(er, textvariable=self.ie_ench_pick, state="readonly", width=22,
+                           values=["%d  %s" % (i, n) for i, n in sorted(NM.ENCHANT_NAMES.items())])
+        ecb.pack(side="left")
+        ttk.Label(er, text="lvl", style="Muted.TLabel").pack(side="left", padx=(6, 2))
+        self.ie_ench_lvl = tk.StringVar(value="1")
+        ttk.Spinbox(er, from_=1, to=32767, textvariable=self.ie_ench_lvl, width=5).pack(side="left")
+        ttk.Button(er, text="Add", style="Card.TButton", command=self._ie_add_ench).pack(side="left", padx=6)
+        ttk.Button(er, text="Remove", style="Card.TButton", command=self._ie_del_ench).pack(side="left")
+        # potion (only for potion items)
+        if is_potion:
+            self._hr(body).pack(fill="x", pady=12)
+            ttk.Label(body, text="Potion", style="Value.TLabel").pack(anchor="w")
+            pr = ttk.Frame(body); pr.pack(anchor="w", pady=(2, 4))
+            ttk.Label(pr, text="base", style="Muted.TLabel").pack(side="left", padx=(0, 4))
+            self.ie_potion = tk.StringVar(value=meta["potion"] or "")
+            ttk.Combobox(pr, textvariable=self.ie_potion, width=30,
+                         values=[""] + NM.POTION_BASES).pack(side="left")
+            self.ie_eff_list = tk.Listbox(body, height=5, width=44); self.ie_eff_list.pack(anchor="w", pady=(2, 2))
+            fr = ttk.Frame(body); fr.pack(anchor="w")
+            self.ie_eff_pick = tk.StringVar()
+            ttk.Combobox(fr, textvariable=self.ie_eff_pick, state="readonly", width=18,
+                         values=["%d  %s" % (i, n) for i, n in sorted(NM.EFFECT_NAMES.items())]).pack(side="left")
+            ttk.Label(fr, text="amp", style="Muted.TLabel").pack(side="left", padx=(6, 2))
+            self.ie_eff_amp = tk.StringVar(value="0")
+            ttk.Spinbox(fr, from_=0, to=255, textvariable=self.ie_eff_amp, width=4).pack(side="left")
+            ttk.Label(fr, text="sec", style="Muted.TLabel").pack(side="left", padx=(6, 2))
+            self.ie_eff_dur = tk.StringVar(value="30")
+            ttk.Spinbox(fr, from_=1, to=1000000, textvariable=self.ie_eff_dur, width=6).pack(side="left")
+            ttk.Button(fr, text="Add", style="Card.TButton", command=self._ie_add_effect).pack(side="left", padx=6)
+            ttk.Button(fr, text="Remove", style="Card.TButton", command=self._ie_del_effect).pack(side="left")
+        else:
+            self.ie_potion = None
+        bar = ttk.Frame(body); bar.pack(fill="x", pady=(16, 0))
+        ttk.Button(bar, text="Apply  →", style="Accent.TButton", command=self._ie_apply).pack(side="left")
+        ttk.Button(bar, text="Close", command=win.destroy).pack(side="right")
+        self._ie_refresh()
+
+    def _ie_refresh(self):
+        from ..core import names as NM
+        self.ie_ench_list.delete(0, "end")
+        for eid, lvl in self._ie_enchants:
+            self.ie_ench_list.insert("end", "%s  %d" % (NM.ENCHANT_NAMES.get(eid, "id %s" % eid), lvl))
+        if getattr(self, "ie_potion", None) is not None and hasattr(self, "ie_eff_list"):
+            self.ie_eff_list.delete(0, "end")
+            for pid, amp, dur in self._ie_effects:
+                self.ie_eff_list.insert("end", "%s  x%d  %ds" % (NM.EFFECT_NAMES.get(pid, "id %s" % pid), amp + 1, dur // 20))
+
+    def _ie_add_ench(self):
+        try:
+            eid = int(self.ie_ench_pick.get().split()[0]); lvl = int(self.ie_ench_lvl.get())
+        except (ValueError, IndexError):
+            return
+        self._ie_enchants = [(i, l) for i, l in self._ie_enchants if i != eid] + [(eid, lvl)]
+        self._ie_refresh()
+
+    def _ie_del_ench(self):
+        sel = self.ie_ench_list.curselection()
+        if sel:
+            del self._ie_enchants[sel[0]]; self._ie_refresh()
+
+    def _ie_add_effect(self):
+        try:
+            pid = int(self.ie_eff_pick.get().split()[0]); amp = int(self.ie_eff_amp.get())
+            dur = int(self.ie_eff_dur.get()) * 20                     # seconds -> ticks
+        except (ValueError, IndexError):
+            return
+        self._ie_effects = [(i, a, d) for i, a, d in self._ie_effects if i != pid] + [(pid, amp, dur)]
+        self._ie_refresh()
+
+    def _ie_del_effect(self):
+        sel = self.ie_eff_list.curselection()
+        if sel:
+            del self._ie_effects[sel[0]]; self._ie_refresh()
+
+    def _ie_apply(self):
+        name = self.ie_name.get().strip() or None
+        potion = (self.ie_potion.get().strip() or None) if getattr(self, "ie_potion", None) is not None else None
+        try:
+            self.session.inventory.set_meta(self._ie_slot, name=name, enchants=self._ie_enchants or None,
+                                            potion=potion, effects=self._ie_effects or None)
+        except Exception as e:
+            self._err(e); return
+        self.refresh_inv()
+        self.status.set("Item in slot %d updated — File ▸ Save (Ctrl+S) to write it." % self._ie_slot)
+        self._ie_win.destroy()
 
     def _refresh_player_stats(self):
         if not self.world or not hasattr(self, "ps_vars"):

@@ -456,6 +456,82 @@ class World:
     def inventory_clear(self):
         self._inventory.items.clear()
 
+    # -- item metadata: enchantments, custom name, potion effects -----------
+    def _item_at(self, slot):
+        for it in self._inventory:
+            if it.get_value("Slot") == slot:
+                return it
+        return None
+
+    def read_item_meta(self, slot):
+        """Current name/lore/enchantments/potion of the item in `slot`, or None if the
+        slot is empty. enchants=[(id,lvl)], effects=[(id,amplifier,duration)]."""
+        it = self._item_at(slot)
+        if it is None:
+            return None
+        out = {"id": it.get_value("id"), "name": None, "lore": [], "enchants": [],
+               "potion": None, "effects": []}
+        tag = it.get_tag("tag")
+        if tag is None:
+            return out
+        t = tag.value
+        disp = t.get_tag("display")
+        if disp is not None:
+            out["name"] = disp.value.get_value("Name")
+            lore = disp.value.get_tag("Lore")
+            if lore is not None:
+                out["lore"] = list(lore.value.items)
+        ench = t.get_tag("ench") or t.get_tag("Enchantments")
+        if ench is not None:
+            out["enchants"] = [(e.get_value("id") if e.get_value("id") is not None else e.get_value("Id"),
+                                e.get_value("lvl") if e.get_value("lvl") is not None else e.get_value("Level"))
+                               for e in ench.value.items]
+        out["potion"] = t.get_value("Potion")
+        cpe = t.get_tag("CustomPotionEffects")
+        if cpe is not None:
+            out["effects"] = [(e.get_value("Id"), e.get_value("Amplifier") or 0,
+                               e.get_value("Duration") or 0) for e in cpe.value.items]
+        return out
+
+    def set_item_meta(self, slot, name=None, lore=None, enchants=None, potion=None, effects=None):
+        """Rebuild the `tag` compound of the item in `slot` from the given fields — pass the
+        FULL desired state (a field left None/empty is removed). enchants=[(id,lvl)],
+        effects=[(id,amplifier,duration)]. Raises if the slot is empty."""
+        it = self._item_at(slot)
+        if it is None:
+            raise ValueError("no item in slot %d" % slot)
+        tag = N.Compound()
+        if name or lore:
+            disp = N.Compound()
+            if name:
+                disp.set("Name", N.STRING, str(name))
+            if lore:
+                disp.set("Lore", N.LIST, N.List(N.STRING, [str(x) for x in lore]))
+            tag.set("display", N.COMPOUND, disp)
+        if enchants:
+            lst = N.List(N.COMPOUND, [])
+            for eid, lvl in enchants:
+                ec = N.Compound(); ec.set("id", N.SHORT, int(eid)); ec.set("lvl", N.SHORT, int(lvl))
+                lst.items.append(ec)
+            tag.set("ench", N.LIST, lst)
+        if potion:
+            tag.set("Potion", N.STRING, str(potion))
+        if effects:
+            lst = N.List(N.COMPOUND, [])
+            for pid, amp, dur in effects:
+                pc = N.Compound()
+                pc.set("Id", N.BYTE, int(pid)); pc.set("Amplifier", N.BYTE, int(amp))
+                pc.set("Duration", N.INT, int(dur))
+                lst.items.append(pc)
+            tag.set("CustomPotionEffects", N.LIST, lst)
+        if len(tag) == 0:
+            if it.get_tag("tag") is not None:
+                del it["tag"]
+        else:
+            it.set("tag", N.COMPOUND, tag)
+        self._dirty_player = True
+        return True
+
     # -- player stats / profile switching ----------------------------------
     def players(self):
         """All profile keys in the save ('players/<XUID>.dat')."""
