@@ -1065,6 +1065,8 @@ class Studio(tk.Tk):
         ttk.Button(br, text="Remove", command=self.on_inv_remove).pack(side="left", padx=8)
         ttk.Button(side, text="✦  Enchant / rename / potion…", style="Card.TButton",
                    command=self.on_item_editor).pack(anchor="w", pady=(8, 0))
+        ttk.Button(side, text="🎒  Loadout kits…", style="Card.TButton",
+                   command=self.on_kits).pack(anchor="w", pady=(6, 0))
         self._hr(side).pack(fill="x", pady=20)
         self.inv_summary = tk.StringVar(value="")
         ttk.Label(side, textvariable=self.inv_summary, style="Muted.TLabel").pack(anchor="w", pady=(0, 12))
@@ -3491,6 +3493,78 @@ class Studio(tk.Tk):
         self.refresh_inv()
         self.status.set("Item in slot %d updated — File ▸ Save (Ctrl+S) to write it." % self._ie_slot)
         self._ie_win.destroy()
+
+    # ------------------------------------------------------------ loadout kits
+    def on_kits(self):
+        if not self._guard() or not self.world:
+            messagebox.showwarning("Loadout kits", "Open a save first."); return
+        p = self.THEMES[self.theme]
+        win = tk.Toplevel(self); self._kits_win = win
+        win.title("Loadout kits")
+        win.configure(background=p["BG"]); win.geometry("460x460")
+        body = ttk.Frame(win, padding=12); body.pack(fill="both", expand=True)
+        ttk.Label(body, text="LOADOUT KITS", style="Section.TLabel").pack(anchor="w")
+        ttk.Label(body, text="Save a named inventory (a PvP kit, a starter kit) and give it to any "
+                            "or all players. Kits are kept across worlds. Save the world to write it.",
+                  style="Muted.TLabel", wraplength=430, justify="left").pack(anchor="w", pady=(1, 8))
+        self.kits_box = tk.Listbox(body, height=9, width=52)
+        self.kits_box.pack(anchor="w", pady=(0, 8))
+        r1 = ttk.Frame(body); r1.pack(fill="x")
+        ttk.Button(r1, text="＋ Save current inventory as kit…", style="Accent.TButton",
+                   command=self._kit_save).pack(side="left")
+        ttk.Button(r1, text="Delete", style="Card.TButton", command=self._kit_delete).pack(side="right")
+        self._hr(body).pack(fill="x", pady=12)
+        ttk.Label(body, text="Apply the selected kit", style="Value.TLabel").pack(anchor="w")
+        self.kit_replace = tk.BooleanVar(value=True)
+        ttk.Checkbutton(body, text="replace the target's inventory (uncheck to add alongside)",
+                        variable=self.kit_replace).pack(anchor="w", pady=(2, 4))
+        r2 = ttk.Frame(body); r2.pack(anchor="w")
+        ttk.Button(r2, text="Apply to active player", style="Card.TButton",
+                   command=lambda: self._kit_apply("active")).pack(side="left")
+        ttk.Button(r2, text="Apply to ALL players", style="Card.TButton",
+                   command=lambda: self._kit_apply("all")).pack(side="left", padx=8)
+        ttk.Button(body, text="Close", command=win.destroy).pack(anchor="e", pady=(14, 0))
+        self._kit_refresh()
+
+    def _kit_refresh(self):
+        self.kits_box.delete(0, "end")
+        for name in self.session.kits.list():
+            items = self.session.kits.get(name) or []
+            self.kits_box.insert("end", "%s   (%d item%s)" % (name, len(items), "" if len(items) == 1 else "s"))
+
+    def _kit_selected(self):
+        sel = self.kits_box.curselection()
+        if not sel:
+            return None
+        return self.kits_box.get(sel[0]).rsplit("   (", 1)[0]
+
+    def _kit_save(self):
+        from tkinter import simpledialog
+        name = simpledialog.askstring("Save kit", "Name for this loadout kit:", parent=self._kits_win)
+        if not name:
+            return
+        n = self.session.kits.capture(name.strip())
+        self._kit_refresh()
+        self.status.set("Saved loadout kit “%s” from the current inventory." % n)
+
+    def _kit_delete(self):
+        name = self._kit_selected()
+        if name and messagebox.askyesno("Delete kit", "Delete the kit “%s”?" % name):
+            self.session.kits.delete(name); self._kit_refresh()
+
+    def _kit_apply(self, who):
+        name = self._kit_selected()
+        if not name:
+            messagebox.showinfo("Loadout kits", "Select a kit first."); return
+        try:
+            n = self.session.kits.apply(name, players=who, replace=self.kit_replace.get())
+        except Exception as e:
+            self._err(e); return
+        self.refresh_inv()
+        self.status.set("Gave “%s” to %d player%s — File ▸ Save (Ctrl+S) to write it."
+                        % (name, n, "" if n == 1 else "s"))
+        messagebox.showinfo("Loadout kits", "Applied “%s” to %d player%s.\n\nUse File ▸ Save (Ctrl+S) "
+                            "to write it into the world." % (name, n, "" if n == 1 else "s"))
 
     def _refresh_player_stats(self):
         if not self.world or not hasattr(self, "ps_vars"):

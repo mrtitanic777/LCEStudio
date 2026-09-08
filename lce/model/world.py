@@ -500,6 +500,17 @@ class World:
         it = self._item_at(slot)
         if it is None:
             raise ValueError("no item in slot %d" % slot)
+        tag = self._build_item_tag(name, lore, enchants, potion, effects)
+        if tag is None:
+            if it.get_tag("tag") is not None:
+                del it["tag"]
+        else:
+            it.set("tag", N.COMPOUND, tag)
+        self._dirty_player = True
+        return True
+
+    def _build_item_tag(self, name=None, lore=None, enchants=None, potion=None, effects=None):
+        """Build an item `tag` Compound from the given fields, or None if all empty."""
         tag = N.Compound()
         if name or lore:
             disp = N.Compound()
@@ -524,13 +535,59 @@ class World:
                 pc.set("Duration", N.INT, int(dur))
                 lst.items.append(pc)
             tag.set("CustomPotionEffects", N.LIST, lst)
-        if len(tag) == 0:
-            if it.get_tag("tag") is not None:
-                del it["tag"]
-        else:
+        return tag if len(tag) else None
+
+    def _item_from_dict(self, d):
+        """Build a full inventory item Compound (id/count/damage/slot + tag) from a kit
+        item dict {id, count, damage, slot, name?, lore?, enchants?, potion?, effects?}."""
+        it = inject.item_compound(int(d["id"]), int(d.get("count", d.get("Count", 1))),
+                                  int(d.get("damage", d.get("Damage", 0))),
+                                  int(d.get("slot", d.get("Slot", 0))))
+        tag = self._build_item_tag(d.get("name"), d.get("lore"), d.get("enchants"),
+                                   d.get("potion"), d.get("effects"))
+        if tag is not None:
             it.set("tag", N.COMPOUND, tag)
-        self._dirty_player = True
-        return True
+        return it
+
+    def capture_inventory(self):
+        """The ACTIVE player's inventory as a list of kit item dicts (id/count/damage/slot
+        + name/lore/enchants/potion/effects), for saving as a loadout kit."""
+        out = []
+        for row in self.inventory():
+            slot = row["Slot"]
+            meta = self.read_item_meta(slot) or {}
+            d = {"id": row["id"], "count": row["Count"], "damage": row["Damage"], "slot": slot}
+            for k in ("name", "lore", "enchants", "potion", "effects"):
+                if meta.get(k):
+                    d[k] = meta[k]
+            out.append(d)
+        return out
+
+    def set_player_inventory(self, pkey, items, replace=True):
+        """Write a list of kit item dicts into `pkey`'s Inventory (any profile, not just the
+        active one). replace=True clears the existing inventory first."""
+        nm, p = self._player_nbt(pkey)
+        inv_tag = p.get_tag("Inventory")
+        if inv_tag is None:
+            p.set("Inventory", N.LIST, N.List(N.COMPOUND, []))
+            inv_tag = p.get_tag("Inventory")
+        lst = inv_tag.value
+        lst.etype = N.COMPOUND
+        if replace:
+            lst.items.clear()
+        used = {c.get_value("Slot") for c in lst.items}
+        free = (s for s in range(36) if s not in used)
+        for d in items:
+            it = self._item_from_dict(d)
+            if not replace and it.get_value("Slot") in used:   # avoid collisions when merging
+                try:
+                    it.set("Slot", N.BYTE, next(free))
+                except StopIteration:
+                    break
+            used.add(it.get_value("Slot"))
+            lst.items.append(it)
+        self._write_player_nbt(pkey, nm, p)
+        return len(items)
 
     # -- player stats / profile switching ----------------------------------
     def players(self):

@@ -179,6 +179,28 @@ class _Waypoints:
         return waypoints.store(self._s.path, wps)
 
 
+class _Kits:
+    """Loadout kits — named inventories (lce.tools.kits), stored outside the save."""
+    def __init__(self, s): self._s = s
+    def list(self):
+        from ..tools import kits; return kits.list_kits()
+    def get(self, name):
+        from ..tools import kits; return kits.get(name)
+    def capture(self, name):
+        """Save the current player's inventory as a named kit."""
+        from ..tools import kits
+        return kits.save_kit(name, self._s.world.capture_inventory())
+    def delete(self, name):
+        from ..tools import kits; return kits.delete_kit(name)
+    def apply(self, name, players="active", replace=True):
+        """Give kit `name` to a player ('active'), 'all', or a list of keys. Save to write."""
+        from ..tools import kits
+        items = kits.get(name)
+        if items is None:
+            raise KeyError("no kit %r" % name)
+        return kits.apply(self._s.world, items, players=players, replace=replace)
+
+
 class _Info:
     def __init__(self, s): self._s = s
     def title_update(self, platform="xbox360"):
@@ -215,6 +237,7 @@ class Session:
         self.generate = _Generate(self)
         self.timelapse = _Timelapse(self)
         self.waypoints = _Waypoints(self)
+        self.kits = _Kits(self)
         self.info = _Info(self)
 
     @classmethod
