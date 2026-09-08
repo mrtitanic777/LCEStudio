@@ -376,7 +376,8 @@ class Studio(tk.Tk):
         self._build_players(); self._build_blocks(); self._build_ent(); self._build_nbt()
         self._build_tools(); self._build_convert(); self._build_io()
         self._select_tab(self.tab_overview)             # branded welcome (with byline) opens first
-        self.after(400, self._lib_scan)                 # populate the Library shortly after launch
+        if self._lib_folders():                         # only auto-scan folders the user has chosen
+            self.after(400, self._lib_scan)
 
     # ---------------------------------------------------------------- Overview
     def _build_overview(self):
@@ -1699,15 +1700,14 @@ class Studio(tk.Tk):
         return os.path.join(d, "library.json")
 
     def _lib_folders(self):
+        """The saves folders the USER has chosen for the Library — nothing is scanned
+        until they add one (no forced default)."""
         import json
         try:
             with open(self._lib_cfg_path(), encoding="utf-8") as f:
-                fld = json.load(f).get("folders", [])
-            if fld:
-                return fld
+                return json.load(f).get("folders", [])
         except Exception:
-            pass
-        return [g for g in ("C:/Nexia360/Library",) if os.path.isdir(g)]
+            return []
 
     def _lib_save_folders(self, folders):
         import json
@@ -1751,6 +1751,7 @@ class Studio(tk.Tk):
         self._lib_show_job = None; self._lib_hide_job = None
         self._lib_detail_cache = {}; self._lib_detail_pending = set()
         self._refresh_folders_label()
+        self._lib_render([], "")                        # show the add-a-folder prompt until one is chosen
 
     def _refresh_folders_label(self):
         f = self._lib_folders()
@@ -1863,9 +1864,15 @@ class Studio(tk.Tk):
         self._lib_photos = []
         total = len(self._lib_worlds)
         if not total:
-            ttk.Label(self.lib_grid, text="No worlds found in the configured folders.",
-                      style="Muted.TLabel").grid(row=0, column=0, padx=8, pady=8)
-            self.lib_status.set("0 worlds")
+            if not self._lib_folders():
+                msg = "No saves folder chosen yet — click “Add folder…” above to pick a folder " \
+                      "(your Nexia/emulator library, Windows LCE saves, or a folder of .bin saves)."
+                self.lib_status.set("")
+            else:
+                msg = "No worlds found in the chosen folder(s)."
+                self.lib_status.set("0 worlds")
+            ttk.Label(self.lib_grid, text=msg, style="Muted.TLabel",
+                      wraplength=560).grid(row=0, column=0, padx=8, pady=8)
             return
         filtered = len(pairs) != total
         self.lib_status.set(("showing %d of %d worlds" % (len(pairs), total)) if filtered
