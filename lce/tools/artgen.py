@@ -20,7 +20,7 @@ from PIL import Image
 from .. import schematic as S
 from ..view3d import mesher
 
-_ATLAS = os.path.join(os.path.dirname(__file__), "view3d", "textures", "terrain.png")
+_ATLAS = os.path.join(os.path.dirname(mesher.__file__), "textures", "terrain.png")  # anchored on the view3d pkg, move-proof
 
 # ---- palettes: lists of (id, meta) solid blocks -----------------------------
 _WOOL = [(35, m) for m in range(16)]
