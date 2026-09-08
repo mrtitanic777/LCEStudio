@@ -46,6 +46,8 @@ def main():
             lines.append("LZXDecompression.dll: %s" % (C._get_lzx_dll() is not None))
             lines.append("recode subs: %s" % bool(R.substitutions_for(0)))
             lines.append("res base: %s" % E._HERE)
+            from lce import inject as _INJ
+            lines.append("lzxc.exe resolves: %s (%s)" % (os.path.exists(_INJ.LZXC), _INJ.LZXC))
             lines.append("RESULT: PASS")
         except Exception as e:
             import traceback
